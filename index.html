@@ -3559,6 +3559,8 @@
             onclick="window.seleccionarTipoPlanModal('unico', this)">Semestral</button>
           <button type="button" class="seg-btn" data-tipo="anual"
             onclick="window.seleccionarTipoPlanModal('anual', this)">Anual</button>
+          <button type="button" class="seg-btn" data-tipo="profesional"
+            onclick="window.seleccionarTipoPlanModal('profesional', this)">Profesional</button>
         </div>
       </div>
 
@@ -5357,14 +5359,14 @@
        ============================================================ */
 
     const ESTADO_CUOTA_BADGE = {
-      pagado: { bg: '#E4EFE9', color: 'var(--verde-800)', label: 'Pagado' },
+      pagado: { bg: '#ADFF2F', color: '#004D00', label: 'Pagado' },
       parcial: { bg: '#E3F2FD', color: '#1976D2', label: 'Parcial' },
       parcial_vencido: { bg: '#FFF3E0', color: '#D97706', label: 'Parcial vencido' },
       vencido: { bg: '#FBEAE9', color: 'var(--error-texto)', label: 'Vencido' },
-      pendiente: { bg: 'var(--fondo)', color: 'var(--texto-suave)', label: 'Pendiente' }
+      pendiente: { bg: '#FFCDD2', color: '#B71C1C', label: 'Pendiente' }
     };
     const ESTADO_FINANCIERO_BADGE = {
-      AL_DIA: { bg: '#E4EFE9', color: 'var(--verde-800)', label: 'Al día' },
+      AL_DIA: { bg: '#ADFF2F', color: '#004D00', label: 'Al día' },
       ATRASADO: { bg: '#FFF3E0', color: '#D97706', label: 'Atrasado' },
       MOROSO: { bg: '#FBEAE9', color: 'var(--error-texto)', label: 'Moroso' }
     };
@@ -5372,6 +5374,7 @@
       cuotas_iguales: 'Por Cuotas',
       unico: 'Semestral (pago único)',
       anual: 'Anual (pago único)',
+      profesional: 'Profesional (Toda la carrera)',
       montos_manuales: 'Montos manuales'
     };
     function badgeHtml(mapa, valor) {
@@ -6316,13 +6319,13 @@
       const plan = window.planActivoFinancieroActual;
       const cfg = window.configFinancieroDefault || {};
 
-      const tipoActual = plan?.tipo_plan === 'anual' || plan?.tipo_plan === 'unico' || plan?.tipo_plan === 'cuotas_iguales'
+      const tipoActual = plan?.tipo_plan === 'anual' || plan?.tipo_plan === 'unico' || plan?.tipo_plan === 'cuotas_iguales' || plan?.tipo_plan === 'profesional'
         ? plan.tipo_plan : 'cuotas_iguales';
       document.querySelectorAll('#segmentadoTipoPlan .seg-btn').forEach(b => b.classList.toggle('activo', b.dataset.tipo === tipoActual));
       window.actualizarCamposTipoPlanModal(tipoActual);
 
       const costoBase = Number(plan?.costo_normal) || Number(cfg.costo_semestre_default) || 0;
-      document.getElementById('planCambioCosto').value = tipoActual === 'anual' && !plan ? (costoBase * 2) : costoBase;
+      document.getElementById('planCambioCosto').value = tipoActual === 'anual' && !plan ? (costoBase * 2) : tipoActual === 'profesional' && !plan ? 12000 : costoBase;
       document.getElementById('planCambioNumCuotas').value = plan?.numero_cuotas || Number(cfg.numero_cuotas_default) || 5;
       document.getElementById('planCambioFecha').value = new Date().toISOString().slice(0, 10);
 
@@ -6337,6 +6340,7 @@
       document.getElementById('campoPlanCambioCuotas').style.display = esCuotas ? 'block' : 'none';
       document.getElementById('lblPlanCambioCosto').textContent = tipo === 'anual'
         ? 'Costo total anual (Bs.)'
+        : tipo === 'profesional' ? 'Costo total de la carrera (Bs.)'
         : 'Costo total del semestre (Bs.)';
       document.getElementById('lblPlanCambioFecha').textContent = esCuotas
         ? 'Vencimiento de la 1ª cuota'
@@ -6346,6 +6350,10 @@
     window.seleccionarTipoPlanModal = function (tipo, btnElem) {
       btnElem.closest('.segmentado').querySelectorAll('.seg-btn').forEach(b => b.classList.toggle('activo', b === btnElem));
       window.actualizarCamposTipoPlanModal(tipo);
+      if (tipo === 'profesional') {
+        const inputCosto = document.getElementById('planCambioCosto');
+        if (!inputCosto.value || inputCosto.value === '0') inputCosto.value = 12000;
+      }
     };
 
     window.cerrarModalCambiarPlan = function () {
@@ -6406,7 +6414,8 @@
           p_fecha_primera_cuota: fecha,
           p_observaciones: tipoPlan === 'anual' ? 'Cambiado a plan anual (pago único) desde Financiero.'
             : tipoPlan === 'unico' ? 'Cambiado a plan semestral (pago único) desde Financiero.'
-              : 'Cambiado a plan por cuotas desde Financiero.'
+            : tipoPlan === 'profesional' ? 'Cambiado a plan profesional (toda la carrera) desde Financiero.'
+            : 'Cambiado a plan por cuotas desde Financiero.'
         });
         if (error) throw error;
 
