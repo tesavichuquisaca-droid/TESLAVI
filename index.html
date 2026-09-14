@@ -3445,6 +3445,26 @@
               </div>
             </div>
             <div class="card list-panel" style="padding:0; margin-top:24px; overflow-x: auto;">
+              <!-- Filtro por rango de fechas -->
+              <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; padding:16px 16px 12px; border-bottom:1px solid var(--borde);">
+                <div style="display:flex; flex-direction:column; gap:4px;">
+                  <label style="font-size:12px; font-weight:600; color:var(--texto-suave);">Fecha desde</label>
+                  <input type="date" id="filtroAsistDesde" class="select-css" style="padding:7px 10px; font-size:13px; width:150px;">
+                </div>
+                <div style="display:flex; flex-direction:column; gap:4px;">
+                  <label style="font-size:12px; font-weight:600; color:var(--texto-suave);">Fecha hasta</label>
+                  <input type="date" id="filtroAsistHasta" class="select-css" style="padding:7px 10px; font-size:13px; width:150px;">
+                </div>
+                <button onclick="window.renderizarTablaVisorAsistenciaAdmin()" class="btn-ingresar"
+                  style="width:auto; padding:8px 16px; margin:0; height:36px;">
+                  Aplicar filtro
+                </button>
+                <button onclick="document.getElementById('filtroAsistDesde').value=''; document.getElementById('filtroAsistHasta').value=''; window.renderizarTablaVisorAsistenciaAdmin();"
+                  class="btn-secundario" style="padding:8px 16px; margin:0; height:36px; font-size:13px;">
+                  Limpiar
+                </button>
+                <span id="lblFiltroAsistResultado" style="font-size:12px; color:var(--texto-suave); align-self:center;"></span>
+              </div>
               <table class="materia-table" style="min-width: 880px;">
                 <thead>
                   <tr id="tablaAdminAsistenciaHead"></tr>
@@ -4117,7 +4137,7 @@
         if (fecha >= fechaInicio && fecha <= fechaFin) {
           total++;
           const estadoDia = asistObjMateria[fecha].estado;
-          if (estadoDia === 'Presente' || estadoDia === 'Atrasado') presentes++; // Atrasado vale igual que Presente. Falta y Falta Justificada NO suman
+          if (estadoDia === 'Presente' || estadoDia === 'Atrasado' || estadoDia === 'Falta Justificada') presentes++; // Atrasado y Falta Justificada valen igual que Presente
         }
       });
       return { pts: total > 0 ? Math.round((presentes / total) * 20) : 0, presentes, total };
@@ -6213,6 +6233,7 @@
             : `<span style="background:#E4EFE9; color:var(--verde-800); padding:4px 10px; border-radius:100px; font-size:12px; font-weight:600;">Pagado</span>`}</td>
             <td style="text-align:center; white-space:nowrap;">
               <button type="button" style="background:#FBEAE9; color:#D32F2F; border:1px solid #F3C6C2; padding:5px 12px; border-radius:var(--r-xs); font-size:11.5px; font-weight:700; cursor:pointer;" onclick="window.reimprimirRecibo('${p.id}')">PDF</button>
+              <button type="button" style="background:#E3F2FD; color:#1565C0; border:1px solid #BBDEFB; padding:5px 12px; border-radius:var(--r-xs); font-size:11.5px; font-weight:700; cursor:pointer;" onclick="window.imprimirReciboDirecto('${p.id}')">Imprimir</button>
               <button type="button" style="background:#E1F7EA; color:#1F9254; border:1px solid #BEEAD0; padding:5px 12px; border-radius:var(--r-xs); font-size:11.5px; font-weight:700; cursor:pointer;" onclick="window.enviarReciboWhatsApp('${p.id}')">WhatsApp</button>
               ${!p.anulado ? `<button type="button" style="background:#FFF3E0; color:#D97706; border:1px solid #FCD9A8; padding:5px 12px; border-radius:var(--r-xs); font-size:11.5px; font-weight:700; cursor:pointer; margin-left:4px;" onclick="window.abrirModalAnularPago('${p.id}', '${r.numero_recibo}')">Anular</button>` : ''}
             </td>
@@ -6598,7 +6619,7 @@
     window.obtenerDatosRecibo = async function (pagoId) {
       const { data: recibo, error } = await supabaseClient
         .from('recibos')
-        .select('numero_recibo, emitido_en, pagos(monto, metodo_pago, numero_comprobante_externo, fecha_pago, saldo_anterior, saldo_actual, observaciones, estudiante_id, cuotas(numero_cuota, planes_pago(tipo_plan)))')
+        .select('numero_recibo, emitido_en, pagos(monto, metodo_pago, numero_comprobante_externo, fecha_pago, saldo_anterior, saldo_actual, observaciones, estudiante_id, registrado_por, cuotas(numero_cuota, planes_pago(tipo_plan)))')
         .eq('pago_id', pagoId)
         .single();
       if (error || !recibo) throw new Error(error ? error.message : 'Recibo no encontrado');
@@ -6609,61 +6630,104 @@
         const { data: estData } = await supabaseClient.from('estudiantes').select('id, nombres, apellidos, ci, celular').eq('id', p.estudiante_id).single();
         est = estData;
       }
-      return { recibo, pago: p, estudiante: est };
+
+      // Obtener iniciales del cajero que registró el pago (no quien imprime)
+      let inicialesCajero = '??';
+      if (p.registrado_por) {
+        const { data: cajero } = await supabaseClient.from('users').select('name').eq('id', p.registrado_por).single();
+        if (cajero?.name) {
+          inicialesCajero = cajero.name.split(' ').map(w => w[0]?.toUpperCase() || '').join('').slice(0, 3);
+        }
+      }
+
+      return { recibo, pago: p, estudiante: est, inicialesCajero };
     };
 
-    window.construirDocRecibo = async function ({ recibo, pago, estudiante }) {
+    window.construirDocRecibo = async function ({ recibo, pago, estudiante, inicialesCajero }) {
       const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
+      
+      const renderizarRecibo = (doc, offsetY, esCopia) => {
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.text("INSTITUTO TECNOLÓGICO", 40, offsetY + 8, { align: "center" });
+        doc.text("TESLAVI", 40, offsetY + 13, { align: "center" });
 
-      doc.setFillColor(6, 35, 26);
-      doc.rect(0, 0, 210, 20, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.text("INSTITUTO TECNOLOGICO TESLAVI", 105, 12, { align: "center" });
-      const logo = await window.obtenerLogoTeslavi();
-      if (logo) doc.addImage(logo, 'JPEG', 8, 3, 14, 14);
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "normal");
+        doc.text("RECIBO DE PAGO N° " + String(recibo.numero_recibo).padStart(6, '0'), 40, offsetY + 20, { align: "center" });
+        doc.text(esCopia ? "*** COPIA INSTITUCIÓN ***" : "*** ORIGINAL CLIENTE ***", 40, offsetY + 25, { align: "center" });
 
-      doc.setTextColor(11, 59, 42);
-      doc.setFontSize(16);
-      doc.text("RECIBO DE PAGO N° " + String(recibo.numero_recibo).padStart(6, '0'), 105, 35, { align: "center" });
+        const fecha = new Date(pago.fecha_pago);
+        const planLabel = pago.cuotas?.planes_pago ? (TIPO_PLAN_LABEL[pago.cuotas.planes_pago.tipo_plan] || pago.cuotas.planes_pago.tipo_plan) : "—";
 
-      const fecha = new Date(pago.fecha_pago);
-      doc.setFontSize(11);
-      doc.setTextColor(0, 0, 0);
-      doc.setFont("helvetica", "normal");
+        const filas = [
+          ["Alumno:", `${estudiante.apellidos} ${estudiante.nombres}`],
+          ["CI:", estudiante.ci],
+          ["Plan:", planLabel],
+          ["Cuota:", pago.cuotas ? `Cuota ${pago.cuotas.numero_cuota}` : "—"],
+          ["Fecha:", fecha.toLocaleDateString('es-BO') + " " + fecha.toLocaleTimeString('es-BO')],
+          ["Método:", pago.metodo_pago.charAt(0).toUpperCase() + pago.metodo_pago.slice(1)],
+          ["Comprobante:", pago.numero_comprobante_externo || "—"],
+          ["Monto pagado:", bs(pago.monto)],
+          ["Saldo anterior:", bs(pago.saldo_anterior)],
+          ["Saldo actual:", bs(pago.saldo_actual)],
+          ["Obs:", pago.observaciones || "—"]
+        ];
 
-      const planLabel = pago.cuotas?.planes_pago ? (TIPO_PLAN_LABEL[pago.cuotas.planes_pago.tipo_plan] || pago.cuotas.planes_pago.tipo_plan) : "—";
+        doc.autoTable({
+          startY: offsetY + 30,
+          body: filas,
+          theme: 'plain',
+          styles: { fontSize: 8, cellPadding: 1, textColor: 0 },
+          columnStyles: { 0: { fontStyle: 'bold', cellWidth: 22 }, 1: { cellWidth: 48 } },
+          margin: { left: 5, right: 5 }
+        });
 
-      const filas = [
-        ["Alumno", `${estudiante.apellidos} ${estudiante.nombres}`],
-        ["CI", estudiante.ci],
-        ["Plan de pago", planLabel],
-        ["Cuota", pago.cuotas ? `Cuota ${pago.cuotas.numero_cuota}` : "—"],
-        ["Fecha", fecha.toLocaleDateString('es-BO')],
-        ["Hora", fecha.toLocaleTimeString('es-BO')],
-        ["Método de pago", pago.metodo_pago.charAt(0).toUpperCase() + pago.metodo_pago.slice(1)],
-        ["N° comprobante", pago.numero_comprobante_externo || "—"],
-        ["Monto pagado", bs(pago.monto)],
-        ["Saldo anterior", bs(pago.saldo_anterior)],
-        ["Saldo actual", bs(pago.saldo_actual)],
-        ["Observaciones", pago.observaciones || "—"]
-      ];
+        let finalY = doc.lastAutoTable.finalY + 5;
+        
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "normal");
+        doc.text("¡Gracias por su pago!", 40, finalY, { align: "center" });
+        doc.text("Contacto: (+591) 76228229", 40, finalY + 4, { align: "center" });
+        // Iniciales del cajero que registró el pago (código interno)
+        doc.setFontSize(7);
+        doc.setTextColor(150, 150, 150);
+        doc.text("Caj: " + (inicialesCajero || '??'), 5, finalY + 8, { align: "left" });
+        doc.setTextColor(0, 0, 0);
+        
+        if (!esCopia) {
+           return finalY + 10;
+        }
+        
+        return finalY + 10;
+      };
 
-      doc.autoTable({
-        startY: 45,
-        body: filas,
-        theme: 'plain',
-        styles: { fontSize: 12, cellPadding: 4 },
-        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 60 } }
-      });
+      const tempDoc = new jsPDF({ format: [80, 500], unit: 'mm' });
+      let alturaOriginal = renderizarRecibo(tempDoc, 0, false);
+      let alturaCopia = renderizarRecibo(tempDoc, 0, true);
 
-      doc.setFontSize(9);
-      doc.setTextColor(120, 120, 120);
-      doc.text("Documento generado por el sistema de gestión del Instituto Tecnológico TESLAVI.", 105, 280, { align: "center" });
+      const doc = new jsPDF({ format: [80, Math.ceil(alturaOriginal)], unit: 'mm' });
+      renderizarRecibo(doc, 0, false);
+      
+      doc.addPage([80, Math.ceil(alturaCopia)], 'p');
+      renderizarRecibo(doc, 0, true);
 
       return doc;
+    };
+
+    window.imprimirReciboDirecto = async function (pagoId) {
+      try {
+        const datos = await window.obtenerDatosRecibo(pagoId);
+        const doc = await window.construirDocRecibo(datos);
+        doc.autoPrint();
+        const blob = doc.output('bloburl');
+        const printWindow = window.open(blob, '_blank');
+        if (!printWindow) {
+           window.toast('Por favor permita las ventanas emergentes (pop-ups) para imprimir.', 'error');
+        }
+      } catch (err) {
+        window.toast('No se pudo abrir para impresión: ' + err.message, 'error');
+      }
     };
 
     window.generarPdfReciboPorPago = async function (pagoId) {
@@ -8693,6 +8757,11 @@
       thead.innerHTML = '';
       tbody.innerHTML = '<tr><td style="text-align: center; color: var(--texto-suave); padding: 32px 0;">Cargando registros...</td></tr>';
 
+      // Limpiar filtros de fecha al cambiar de materia
+      document.getElementById('filtroAsistDesde').value = '';
+      document.getElementById('filtroAsistHasta').value = '';
+      document.getElementById('lblFiltroAsistResultado').textContent = '';
+
       const { data, error } = await supabaseClient.from("estudiantes").select("*").or(`and(semestre.eq.${semestreId},turno.eq.${turno}),materias_arrastre.ilike.%|${codigo}@${turno}|%`).order("apellidos", { ascending: true });
 
       if (error || !data || data.length === 0) {
@@ -8718,6 +8787,22 @@
       });
 
       let fechasArray = Array.from(todasLasFechas).sort();
+
+      // Filtrar por rango de fechas si el usuario seleccionó alguno
+      const filtroDesde = document.getElementById('filtroAsistDesde')?.value || '';
+      const filtroHasta = document.getElementById('filtroAsistHasta')?.value || '';
+      if (filtroDesde) fechasArray = fechasArray.filter(f => f >= filtroDesde);
+      if (filtroHasta) fechasArray = fechasArray.filter(f => f <= filtroHasta);
+
+      // Actualizar etiqueta de resultado
+      const lblResultado = document.getElementById('lblFiltroAsistResultado');
+      if (lblResultado) {
+        if (filtroDesde || filtroHasta) {
+          lblResultado.textContent = `${fechasArray.length} fecha(s) mostrada(s)`;
+        } else {
+          lblResultado.textContent = `${fechasArray.length} fecha(s) en total`;
+        }
+      }
 
       if (fechasArray.length === 0) {
         thead.innerHTML = '<tr><th>#</th><th>Estudiante</th><th>Info</th></tr>';
@@ -8770,7 +8855,7 @@
               <input type="text" class="input-css admin-motivo-input" style="width: 100%; font-size: 10px; padding: 2px; margin-top: 2px; display: none;" placeholder="Motivo...">
             </td>`;
           } else if (reg.estado === 'Falta Justificada') {
-            fj++;
+            fj++; p++; // Falta Justificada cuenta como presente
             let m = reg.motivo || '';
             htmlBody += `<td style="text-align:center; padding: 4px;">
               <select class="select-css admin-asist-input" style="width: 100%; font-size: 11px; padding: 2px;" data-id="${est.id}" data-fecha="${fecha}">
@@ -9130,7 +9215,9 @@
                 estTotalFaltas++;
                 totalFaltasGlobal++;
               } else if (reg.estado === 'Falta Justificada') {
+                fj++;
                 totalFJGlobal++;
+                totalPresentesGlobal++; // Falta Justificada cuenta como presente
               } else if (reg.estado === 'Presente' || reg.estado === 'Atrasado') {
                 totalPresentesGlobal++;
               }
@@ -9627,7 +9714,14 @@
         try { if (est.asistencias) asistObj = typeof est.asistencias === 'string' ? JSON.parse(est.asistencias) : est.asistencias; } catch (e) { }
         Object.keys(asistObj[codigoMat] || {}).forEach(f => todasLasFechas.add(f));
       });
-      return Array.from(todasLasFechas).sort();
+      let fechasArray = Array.from(todasLasFechas).sort();
+      
+      const filtroDesde = document.getElementById('filtroAsistDesde')?.value || '';
+      const filtroHasta = document.getElementById('filtroAsistHasta')?.value || '';
+      if (filtroDesde) fechasArray = fechasArray.filter(f => f >= filtroDesde);
+      if (filtroHasta) fechasArray = fechasArray.filter(f => f <= filtroHasta);
+      
+      return fechasArray;
     }
 
     window.exportarExcelHistorialAdmin = async function () {
@@ -9700,7 +9794,7 @@
           else if (reg.estado === 'Presente') { p++; rowVals.push('1'); }
           else if (reg.estado === 'Atrasado') { p++; at++; rowVals.push('T'); }
           else if (reg.estado === 'Falta') { f++; rowVals.push('0'); }
-          else if (reg.estado === 'Falta Justificada') { fj++; rowVals.push(`FJ (${reg.motivo || ''})`); }
+          else if (reg.estado === 'Falta Justificada') { fj++; p++; rowVals.push(`FJ`); } // FJ cuenta como presente
           else { rowVals.push('?'); }
         });
 
@@ -9770,7 +9864,7 @@
           else if (reg.estado === 'Presente') { p++; row.push('1'); }
           else if (reg.estado === 'Atrasado') { p++; at++; row.push('T'); }
           else if (reg.estado === 'Falta') { f++; row.push('0'); }
-          else if (reg.estado === 'Falta Justificada') { fj++; row.push(`FJ`); }
+          else if (reg.estado === 'Falta Justificada') { fj++; p++; row.push(`FJ`); } // FJ cuenta como presente
           else { row.push('?'); }
         });
 
