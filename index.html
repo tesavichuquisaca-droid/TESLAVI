@@ -850,7 +850,8 @@
               <path d="M10 9H8" />
             </svg> <span
               style="font-family: var(--f-datos); color: var(--verde-600); opacity: 0.7; margin-right: 8px; font-size: 13px;">05</span>
-            Notas y Asistencia</div>
+            Notas y Asistencia
+          </div>
 
           <div class="menu-item" id="menu-admin-estadisticas" onclick="cambiarSeccion('seccion-estadisticas', this)">
             <svg class="ui-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -861,7 +862,8 @@
               <path d="M8 17v-3" />
             </svg> <span
               style="font-family: var(--f-datos); color: var(--verde-600); opacity: 0.7; margin-right: 8px; font-size: 13px;">06</span>
-            Estadísticas y Analítica</div>
+            Estadísticas y Analítica
+          </div>
 
           <div class="menu-item" id="menu-admin-centralizador" onclick="cambiarSeccion('seccion-centralizador', this)">
             <svg class="ui-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -873,7 +875,8 @@
               <line x1="15" y1="3" x2="15" y2="21" />
             </svg> <span
               style="font-family: var(--f-datos); color: var(--verde-600); opacity: 0.7; margin-right: 8px; font-size: 13px;">07</span>
-            Centralizador</div>
+            Centralizador
+          </div>
 
           <div class="menu-item" id="menu-admin-libretas" onclick="cambiarSeccion('seccion-libretas', this)"><svg
               class="ui-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -2354,7 +2357,8 @@
                   <span class="marca-esquina marca-esquina--br"></span>
 
                   <div class="franja-identificacion">TESLAVI · LIBRETA · <span id="libreta-gestion-doc">—</span> · CI
-                    <span id="libreta-ci-doc">—</span></div>
+                    <span id="libreta-ci-doc">—</span>
+                  </div>
 
                   <div style="text-align:center; margin-bottom:24px;">
                     <img src="assets/img/teslavi.jpg" alt="Logo TESLAVI"
@@ -2969,7 +2973,8 @@
                     egresados, y generá los planes de pago de la gestión nueva — todo en un paso. El sistema
                     <strong>sugiere</strong> promueve/repite/egresa según las materias reprobadas y sus correlativas
                     (columna "Sugerido"), pero es solo una ayuda — tenés que elegir el resultado a mano, fila por fila,
-                    antes de confirmar.</p>
+                    antes de confirmar.
+                  </p>
                 </div>
                 <div class="form-section-body">
                   <div class="form-grid-2">
@@ -3095,15 +3100,30 @@
             <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">
               <div>
                 <h1 class="header-title">Reportes Financieros</h1>
-                <p class="header-desc">Total cobrado por método de pago, por cajera, y estado de todos los estudiantes.</p>
+                <p class="header-desc">Total cobrado por método de pago, por cajera, y estado de todos los estudiantes.
+                </p>
               </div>
               <div style="display:flex; gap:8px; flex-wrap:wrap;">
                 <button type="button" class="btn-ingresar" onclick="window.exportarReporteFinancieroPDF()"
                   style="width:auto; padding:8px 14px; margin:0; background:#D32F2F;" title="Exportar PDF completo">
-                  <svg class="ui-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M10 13v4"/><path d="M10 13h2.5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5H10"/></svg> PDF</button>
+                  <svg class="ui-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <path d="M10 13v4" />
+                    <path d="M10 13h2.5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5H10" />
+                  </svg> PDF</button>
                 <button type="button" class="btn-ingresar" onclick="window.exportarReporteFinancieroExcel()"
                   style="width:auto; padding:8px 14px; margin:0; background:#1B8557;" title="Exportar Excel completo">
-                  <svg class="ui-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h2"/><path d="M8 17h2"/><path d="M14 13h2"/><path d="M14 17h2"/></svg> Excel</button>
+                  <svg class="ui-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <path d="M8 13h2" />
+                    <path d="M8 17h2" />
+                    <path d="M14 13h2" />
+                    <path d="M14 17h2" />
+                  </svg> Excel</button>
               </div>
             </div>
 
@@ -3461,24 +3481,29 @@
             </div>
             <div class="card list-panel" style="padding:0; margin-top:24px; overflow-x: auto;">
               <!-- Filtro por rango de fechas -->
-              <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; padding:16px 16px 12px; border-bottom:1px solid var(--borde);">
+              <div
+                style="display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; padding:16px 16px 12px; border-bottom:1px solid var(--borde);">
                 <div style="display:flex; flex-direction:column; gap:4px;">
                   <label style="font-size:12px; font-weight:600; color:var(--texto-suave);">Fecha desde</label>
-                  <input type="date" id="filtroAsistDesde" class="select-css" style="padding:7px 10px; font-size:13px; width:150px;">
+                  <input type="date" id="filtroAsistDesde" class="select-css"
+                    style="padding:7px 10px; font-size:13px; width:150px;">
                 </div>
                 <div style="display:flex; flex-direction:column; gap:4px;">
                   <label style="font-size:12px; font-weight:600; color:var(--texto-suave);">Fecha hasta</label>
-                  <input type="date" id="filtroAsistHasta" class="select-css" style="padding:7px 10px; font-size:13px; width:150px;">
+                  <input type="date" id="filtroAsistHasta" class="select-css"
+                    style="padding:7px 10px; font-size:13px; width:150px;">
                 </div>
                 <button onclick="window.renderizarTablaVisorAsistenciaAdmin()" class="btn-ingresar"
                   style="width:auto; padding:8px 16px; margin:0; height:36px;">
                   Aplicar filtro
                 </button>
-                <button onclick="document.getElementById('filtroAsistDesde').value=''; document.getElementById('filtroAsistHasta').value=''; window.renderizarTablaVisorAsistenciaAdmin();"
+                <button
+                  onclick="document.getElementById('filtroAsistDesde').value=''; document.getElementById('filtroAsistHasta').value=''; window.renderizarTablaVisorAsistenciaAdmin();"
                   class="btn-secundario" style="padding:8px 16px; margin:0; height:36px; font-size:13px;">
                   Limpiar
                 </button>
-                <span id="lblFiltroAsistResultado" style="font-size:12px; color:var(--texto-suave); align-self:center;"></span>
+                <span id="lblFiltroAsistResultado"
+                  style="font-size:12px; color:var(--texto-suave); align-self:center;"></span>
               </div>
               <table class="materia-table" style="min-width: 880px;">
                 <thead>
@@ -6377,7 +6402,7 @@
       document.getElementById('lblPlanCambioCosto').textContent = tipo === 'anual'
         ? 'Costo total anual (Bs.)'
         : tipo === 'profesional' ? 'Costo total de la carrera (Bs.)'
-        : 'Costo total del semestre (Bs.)';
+          : 'Costo total del semestre (Bs.)';
       document.getElementById('lblPlanCambioFecha').textContent = esCuotas
         ? 'Vencimiento de la 1ª cuota'
         : 'Vencimiento del pago';
@@ -6450,8 +6475,8 @@
           p_fecha_primera_cuota: fecha,
           p_observaciones: tipoPlan === 'anual' ? 'Cambiado a plan anual (pago único) desde Financiero.'
             : tipoPlan === 'unico' ? 'Cambiado a plan semestral (pago único) desde Financiero.'
-            : tipoPlan === 'profesional' ? 'Cambiado a plan profesional (toda la carrera) desde Financiero.'
-            : 'Cambiado a plan por cuotas desde Financiero.'
+              : tipoPlan === 'profesional' ? 'Cambiado a plan profesional (toda la carrera) desde Financiero.'
+                : 'Cambiado a plan por cuotas desde Financiero.'
         });
         if (error) throw error;
 
@@ -6660,7 +6685,7 @@
 
     window.construirDocRecibo = async function ({ recibo, pago, estudiante, inicialesCajero }) {
       const { jsPDF } = window.jspdf;
-      
+
       const renderizarRecibo = (doc, offsetY, esCopia) => {
         doc.setFontSize(12);
         doc.setFont("helvetica", "bold");
@@ -6699,21 +6724,21 @@
         });
 
         let finalY = doc.lastAutoTable.finalY + 5;
-        
+
         doc.setFontSize(8);
         doc.setFont("helvetica", "normal");
         doc.text("¡Gracias por su pago!", 40, finalY, { align: "center" });
-        doc.text("Contacto: (+591) 76228229", 40, finalY + 4, { align: "center" });
+        doc.text("Contacto: (+591) 62327206", 40, finalY + 4, { align: "center" });
         // Iniciales del cajero que registró el pago (código interno)
         doc.setFontSize(7);
         doc.setTextColor(150, 150, 150);
         doc.text("Caj: " + (inicialesCajero || '??'), 5, finalY + 8, { align: "left" });
         doc.setTextColor(0, 0, 0);
-        
+
         if (!esCopia) {
-           return finalY + 10;
+          return finalY + 10;
         }
-        
+
         return finalY + 10;
       };
 
@@ -6723,7 +6748,7 @@
 
       const doc = new jsPDF({ format: [80, Math.ceil(alturaOriginal)], unit: 'mm' });
       renderizarRecibo(doc, 0, false);
-      
+
       doc.addPage([80, Math.ceil(alturaCopia)], 'p');
       renderizarRecibo(doc, 0, true);
 
@@ -6738,7 +6763,7 @@
         const blob = doc.output('bloburl');
         const printWindow = window.open(blob, '_blank');
         if (!printWindow) {
-           window.toast('Por favor permita las ventanas emergentes (pop-ups) para imprimir.', 'error');
+          window.toast('Por favor permita las ventanas emergentes (pop-ups) para imprimir.', 'error');
         }
       } catch (err) {
         window.toast('No se pudo abrir para impresión: ' + err.message, 'error');
@@ -9941,12 +9966,12 @@
         Object.keys(asistObj[codigoMat] || {}).forEach(f => todasLasFechas.add(f));
       });
       let fechasArray = Array.from(todasLasFechas).sort();
-      
+
       const filtroDesde = document.getElementById('filtroAsistDesde')?.value || '';
       const filtroHasta = document.getElementById('filtroAsistHasta')?.value || '';
       if (filtroDesde) fechasArray = fechasArray.filter(f => f >= filtroDesde);
       if (filtroHasta) fechasArray = fechasArray.filter(f => f <= filtroHasta);
-      
+
       return fechasArray;
     }
 
