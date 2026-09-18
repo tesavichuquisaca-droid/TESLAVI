@@ -4193,7 +4193,7 @@
       const a2 = ptsAsistenciaTrimestre(asistObjMateria, cfg.t2_inicio, cfg.t2_fin);
       const t1total = subtotalTrimestre(n.t1, a1.pts);
       const t2total = subtotalTrimestre(n.t2, a2.pts);
-      const semestral = (t1total * 0.70) + (t2total * 0.30);
+      const semestral = (t1total + t2total) / 2;
       const habilitaRecuperatorio = semestral >= 42 && semestral < 61;
       const rec = n.recuperatorio;
       const notaFinal = (rec === null || rec === undefined || rec === '') ? semestral : (Number(rec) >= 61 ? 61 : Number(rec));
