@@ -2721,8 +2721,27 @@
                       </div>
                       <div class="campo"><label for="descRapidoAutorizado">Autorizado por</label><input type="text"
                           id="descRapidoAutorizado" placeholder="Ej. Director"></div>
-                      <div class="campo"><label for="descRapidoMotivo">¿Por qué el descuento?</label><input type="text"
-                          id="descRapidoMotivo" placeholder="Ej. Beca deportiva"></div>
+                      <div class="campo">
+                        <label for="descRapidoMotivo">¿Por qué el descuento?</label>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                          <select id="descRapidoMotivoSelect" class="select-css" style="max-width: 200px;" onchange="if(this.value){ document.getElementById('descRapidoMotivo').value = this.value; }">
+                            <option value="" selected>-- Seleccionar opción --</option>
+                            <option value="Nuevo">Nuevo</option>
+                            <option value="Antiguo">Antiguo</option>
+                            <option value="Beca distancia">Beca distancia</option>
+                            <option value="Beca socioeconómica">Beca socioeconómica</option>
+                            <option value="Beca estudio">Beca estudio</option>
+                          </select>
+                          <input type="text" id="descRapidoMotivo" class="select-css" placeholder="Ej. Beca estudio u otro motivo..." list="opcionesMotivoDescuento" style="flex:1; min-width: 180px;">
+                        </div>
+                        <datalist id="opcionesMotivoDescuento">
+                          <option value="Nuevo"></option>
+                          <option value="Antiguo"></option>
+                          <option value="Beca distancia"></option>
+                          <option value="Beca socioeconómica"></option>
+                          <option value="Beca estudio"></option>
+                        </datalist>
+                      </div>
                     </div>
                     <div class="form-actions">
                       <div class="mensaje" id="mensajeDescRapido" role="alert" style="margin: 0;"></div>
@@ -6356,6 +6375,8 @@
         document.getElementById('descRapidoMonto').value = '';
         document.getElementById('descRapidoAutorizado').value = '';
         document.getElementById('descRapidoMotivo').value = '';
+        const selMot = document.getElementById('descRapidoMotivoSelect');
+        if (selMot) selMot.value = '';
         await window.refrescarFinancieroEstudiante();
         await window.cargarTablaFinanciero();
       } catch (err) {
