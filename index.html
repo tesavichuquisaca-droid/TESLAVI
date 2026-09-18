@@ -7596,7 +7596,7 @@
       // Traer pagos con detalle de estudiante y cuota
       const { data: pagos, error } = await supabaseClient
         .from('pagos')
-        .select('id, monto, metodo_pago, fecha_pago, registrado_por, numero_comprobante_externo, anulado, estudiante_id, cuotas(numero_cuota, planes_pago(tipo_plan)), estudiantes(nombres, apellidos, ci)')
+        .select('id, monto, metodo_pago, fecha_pago, registrado_por, numero_comprobante_externo, anulado, estudiante_id, cuotas(numero_cuota, planes_pago(tipo_plan)), estudiantes(nombres, apellidos, ci, semestre, estado_financiero)')
         .gte('fecha_pago', desde)
         .lte('fecha_pago', hasta + 'T23:59:59')
         .eq('anulado', false)
@@ -7610,7 +7610,18 @@
       const { data: usuarios } = await supabaseClient.from('users').select('id, name');
       const userMap = new Map((usuarios || []).map(u => [u.id, u.name]));
 
-      const totalGeneral = pagos.reduce((s, p) => s + Number(p.monto), 0);
+      let totalEfectivo = 0;
+      let totalTransferencia = 0;
+      let totalQR = 0;
+      const totalGeneral = pagos.reduce((s, p) => {
+        const m = Number(p.monto || 0);
+        const met = (p.metodo_pago || '').toLowerCase().trim();
+        if (met === 'efectivo') totalEfectivo += m;
+        else if (met === 'transferencia') totalTransferencia += m;
+        else if (met === 'qr') totalQR += m;
+        return s + m;
+      }, 0);
+
       const porMetodo = {};
       pagos.forEach(p => { porMetodo[p.metodo_pago] = (porMetodo[p.metodo_pago] || 0) + Number(p.monto); });
       const porUsuario = {};
@@ -7620,19 +7631,33 @@
       });
 
       // Guardar en cache para exportar
-      window.reporteFinancieroCache = { pagos, porMetodo, porUsuario, totalGeneral, desde, hasta, userMap };
+      window.reporteFinancieroCache = { pagos, porMetodo, porUsuario, totalGeneral, totalEfectivo, totalTransferencia, totalQR, desde, hasta, userMap };
 
       const filasPagos = pagos.map((p, i) => {
         const cajera = userMap.get(p.registrado_por) || 'Desconocido';
         const est = p.estudiantes || {};
+        const semestre = est.semestre || '-';
+        const cuotaTexto = p.cuotas?.numero_cuota ? `Cuota ${p.cuotas.numero_cuota}` : '-';
+        const estadoTexto = est.estado_financiero || 'PAGADO';
         const fecha = new Date(p.fecha_pago).toLocaleDateString('es-BO') + ' ' + new Date(p.fecha_pago).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' });
+        const met = (p.metodo_pago || '').toLowerCase().trim();
+        const mEfectivo = met === 'efectivo' ? Number(p.monto) : 0;
+        const mTransferencia = met === 'transferencia' ? Number(p.monto) : 0;
+        const mQR = met === 'qr' ? Number(p.monto) : 0;
+
         return `<tr>
           <td style="text-align:center;">${i + 1}</td>
           <td>${est.apellidos || ''} ${est.nombres || ''}</td>
           <td>${est.ci || ''}</td>
+          <td style="text-align:center;">${semestre}</td>
+          <td style="text-align:center;">${cuotaTexto}</td>
+          <td style="text-align:center;">${badgeHtml(ESTADO_FINANCIERO_BADGE, estadoTexto)}</td>
           <td>${cajera}</td>
           <td style="text-transform:capitalize;">${p.metodo_pago}</td>
           <td>${fecha}</td>
+          <td style="text-align:right;">${mEfectivo ? bs(mEfectivo) : '-'}</td>
+          <td style="text-align:right;">${mTransferencia ? bs(mTransferencia) : '-'}</td>
+          <td style="text-align:right;">${mQR ? bs(mQR) : '-'}</td>
           <td style="text-align:right; font-weight:600; color:var(--verde-800);">${bs(p.monto)}</td>
         </tr>`;
       }).join('');
@@ -7654,10 +7679,34 @@
         <div class="form-card" style="max-width:1000px; margin-top:16px; overflow-x:auto;">
           <div class="form-section-header"><h3>Detalle de pagos recibidos</h3></div>
           <div class="form-section-body" style="padding:0; overflow-x:auto;">
-            <table class="materia-table" style="width:100%; min-width:700px;">
-              <thead><tr><th>#</th><th>Estudiante</th><th>CI</th><th>Cajera</th><th>Método</th><th>Fecha y Hora</th><th style="text-align:right;">Monto</th></tr></thead>
-              <tbody>${filasPagos || '<tr><td colspan="7" style="text-align:center;">Sin pagos en este rango</td></tr>'}</tbody>
-              <tfoot><tr><td colspan="6" style="text-align:right; font-weight:700; padding:8px;">TOTAL:</td><td style="text-align:right; font-weight:700; padding:8px; color:var(--verde-800);">${bs(totalGeneral)}</td></tr></tfoot>
+            <table class="materia-table" style="width:100%; min-width:1100px;">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Estudiante</th>
+                  <th>CI</th>
+                  <th style="text-align:center;">Semestre</th>
+                  <th style="text-align:center;">Cuota</th>
+                  <th style="text-align:center;">Estado</th>
+                  <th>Cajera</th>
+                  <th>Método</th>
+                  <th>Fecha y Hora</th>
+                  <th style="text-align:right;">Efectivo (Bs)</th>
+                  <th style="text-align:right;">Transferencia (Bs)</th>
+                  <th style="text-align:right;">QR (Bs)</th>
+                  <th style="text-align:right;">Monto Total</th>
+                </tr>
+              </thead>
+              <tbody>${filasPagos || '<tr><td colspan="13" style="text-align:center;">Sin pagos en este rango</td></tr>'}</tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="9" style="text-align:right; font-weight:700; padding:8px;">TOTALES:</td>
+                  <td style="text-align:right; font-weight:700; padding:8px;">${bs(totalEfectivo)}</td>
+                  <td style="text-align:right; font-weight:700; padding:8px;">${bs(totalTransferencia)}</td>
+                  <td style="text-align:right; font-weight:700; padding:8px;">${bs(totalQR)}</td>
+                  <td style="text-align:right; font-weight:700; padding:8px; color:var(--verde-800);">${bs(totalGeneral)}</td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         </div>`;
@@ -7745,80 +7794,110 @@
         window.toast('Primero genera el reporte.', 'info'); return;
       }
       const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
+      const doc = new jsPDF('l', 'mm', 'a4');
       const fechaHoy = new Date().toLocaleDateString('es-ES');
 
       doc.setFillColor(6, 35, 26);
-      doc.rect(0, 0, 210, 20, 'F');
+      doc.rect(0, 0, 297, 20, 'F');
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(14); doc.setFont('helvetica', 'bold');
-      doc.text('INSTITUTO TECNOLÓGICO TESLAVI', 105, 12, { align: 'center' });
+      doc.text('INSTITUTO TECNOLÓGICO TESLAVI', 148.5, 12, { align: 'center' });
       const logo = await window.obtenerLogoTeslavi();
-      if (logo) doc.addImage(logo, 'JPEG', 8, 3, 14, 14);
+      if (logo) doc.addImage(logo, 'JPEG', 10, 3, 14, 14);
 
       doc.setTextColor(11, 59, 42); doc.setFontSize(12);
-      doc.text('REPORTE FINANCIERO', 105, 30, { align: 'center' });
-      doc.setFontSize(9); doc.setTextColor(0, 0, 0); doc.setFont('helvetica', 'normal');
-      doc.text(`Período: ${c.desde} al ${c.hasta}   |   Total: ${bs(c.totalGeneral)}   |   Generado: ${fechaHoy}`, 105, 38, { align: 'center' });
+      doc.text('REPORTE FINANCIERO', 148.5, 28, { align: 'center' });
+      doc.setFontSize(8.5); doc.setTextColor(0, 0, 0); doc.setFont('helvetica', 'normal');
+      doc.text(`Período: ${c.desde} al ${c.hasta}   |   Efectivo: ${bs(c.totalEfectivo || 0)}   |   Transferencia: ${bs(c.totalTransferencia || 0)}   |   QR: ${bs(c.totalQR || 0)}   |   Total: ${bs(c.totalGeneral)}   |   Generado: ${fechaHoy}`, 148.5, 35, { align: 'center' });
 
       // Tabla resumen por cajera
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
-      doc.text('Resumen por cajera', 14, 48);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5);
+      doc.text('Resumen por cajera', 14, 43);
       doc.autoTable({
-        startY: 52,
+        startY: 46,
         head: [['Cajera', 'Total cobrado']],
         body: Object.entries(c.porUsuario).map(([u, v]) => [u, bs(v)]),
         headStyles: { fillColor: [20, 108, 70], textColor: [255, 255, 255] },
-        styles: { fontSize: 9 }, alternateRowStyles: { fillColor: [240, 245, 242] }
+        styles: { fontSize: 8 }, alternateRowStyles: { fillColor: [240, 245, 242] },
+        tableWidth: 100
       });
 
       // Tabla resumen por método
-      let nextY = doc.lastAutoTable.finalY + 8;
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
+      let nextY = doc.lastAutoTable.finalY + 6;
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5);
       doc.text('Resumen por método de pago', 14, nextY);
       doc.autoTable({
-        startY: nextY + 4,
+        startY: nextY + 3,
         head: [['Método', 'Total']],
         body: Object.entries(c.porMetodo).map(([m, v]) => [m.charAt(0).toUpperCase() + m.slice(1), bs(v)]),
         headStyles: { fillColor: [20, 108, 70], textColor: [255, 255, 255] },
-        styles: { fontSize: 9 }, alternateRowStyles: { fillColor: [240, 245, 242] }
+        styles: { fontSize: 8 }, alternateRowStyles: { fillColor: [240, 245, 242] },
+        tableWidth: 100
       });
 
       // Tabla detalle de pagos
       nextY = doc.lastAutoTable.finalY + 8;
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
-      doc.text('Detalle de pagos', 14, nextY);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5);
+      doc.text('Detalle de pagos recibidos', 14, nextY);
       doc.autoTable({
-        startY: nextY + 4,
-        head: [['#', 'Estudiante', 'CI', 'Cajera', 'Método', 'Fecha', 'Monto']],
+        startY: nextY + 3,
+        head: [['#', 'Estudiante', 'CI', 'Semestre', 'Cuota', 'Estado', 'Cajera', 'Método', 'Fecha', 'Efectivo', 'Transferencia', 'QR', 'Total']],
         body: c.pagos.map((p, i) => {
           const cajera = c.userMap.get(p.registrado_por) || 'Desc.';
           const est = p.estudiantes || {};
           const fecha = new Date(p.fecha_pago).toLocaleDateString('es-BO');
-          return [i + 1, `${est.apellidos || ''} ${est.nombres || ''}`.trim(), est.ci || '', cajera, p.metodo_pago, fecha, bs(p.monto)];
+          const semestre = est.semestre || '-';
+          const cuota = p.cuotas?.numero_cuota ? `Cuota ${p.cuotas.numero_cuota}` : '-';
+          const estado = est.estado_financiero || 'PAGADO';
+          const met = (p.metodo_pago || '').toLowerCase().trim();
+          const montoEf = met === 'efectivo' ? bs(p.monto) : '-';
+          const montoTr = met === 'transferencia' ? bs(p.monto) : '-';
+          const montoQr = met === 'qr' ? bs(p.monto) : '-';
+
+          return [
+            i + 1,
+            `${est.apellidos || ''} ${est.nombres || ''}`.trim(),
+            est.ci || '',
+            semestre,
+            cuota,
+            estado,
+            cajera,
+            p.metodo_pago,
+            fecha,
+            montoEf,
+            montoTr,
+            montoQr,
+            bs(p.monto)
+          ];
         }),
-        foot: [['', '', '', '', '', 'TOTAL', bs(c.totalGeneral)]],
-        headStyles: { fillColor: [20, 108, 70], textColor: [255, 255, 255], fontSize: 8 },
-        footStyles: { fillColor: [240, 245, 242], fontStyle: 'bold' },
-        styles: { fontSize: 8, cellPadding: 2 },
-        columnStyles: { 0: { cellWidth: 8 }, 6: { halign: 'right' } },
+        foot: [['', '', '', '', '', '', '', '', 'TOTALES', bs(c.totalEfectivo || 0), bs(c.totalTransferencia || 0), bs(c.totalQR || 0), bs(c.totalGeneral)]],
+        headStyles: { fillColor: [20, 108, 70], textColor: [255, 255, 255], fontSize: 7.5 },
+        footStyles: { fillColor: [240, 245, 242], fontStyle: 'bold', fontSize: 7.5 },
+        styles: { fontSize: 7.5, cellPadding: 2 },
+        columnStyles: {
+          0: { cellWidth: 8 },
+          9: { halign: 'right' },
+          10: { halign: 'right' },
+          11: { halign: 'right' },
+          12: { halign: 'right', fontStyle: 'bold' }
+        },
         alternateRowStyles: { fillColor: [240, 245, 242] }
       });
 
       // Morosidad
       if (window.moroCache && window.moroCache.length > 0) {
-        doc.addPage();
-        doc.setFillColor(6, 35, 26); doc.rect(0, 0, 210, 20, 'F');
+        doc.addPage('a4', 'landscape');
+        doc.setFillColor(6, 35, 26); doc.rect(0, 0, 297, 20, 'F');
         doc.setTextColor(255, 255, 255); doc.setFontSize(14); doc.setFont('helvetica', 'bold');
-        doc.text('INSTITUTO TECNOLÓGICO TESLAVI', 105, 12, { align: 'center' });
+        doc.text('INSTITUTO TECNOLÓGICO TESLAVI', 148.5, 12, { align: 'center' });
         doc.setTextColor(11, 59, 42); doc.setFontSize(12);
-        doc.text('ESTUDIANTES CON SALDO PENDIENTE', 105, 30, { align: 'center' });
+        doc.text('ESTUDIANTES CON SALDO PENDIENTE', 148.5, 28, { align: 'center' });
         doc.autoTable({
-          startY: 38,
+          startY: 35,
           head: [['Estudiante', 'CI', 'Saldo Pendiente', 'Cuotas Vencidas', 'Estado']],
           body: window.moroCache.map(e => [`${e.apellidos} ${e.nombres}`, e.ci, bs(e.saldo), e.cuotas_vencidas, e.estado_financiero]),
           headStyles: { fillColor: [211, 47, 47], textColor: [255, 255, 255] },
-          styles: { fontSize: 9 }, alternateRowStyles: { fillColor: [253, 232, 232] }
+          styles: { fontSize: 8.5 }, alternateRowStyles: { fillColor: [253, 232, 232] }
         });
       }
 
@@ -7835,28 +7914,68 @@
 
       // Hoja 1: Detalle de pagos
       const ws1 = wb.addWorksheet('Pagos Recibidos');
-      ws1.mergeCells('A1:G1');
-      ws1.getCell('A1').value = `INSTITUTO TECNOLÓGICO TESLAVI — REPORTE FINANCIERO ${c.desde} al ${c.hasta} — ${fechaHoy}`;
-      ws1.getCell('A1').font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      ws1.mergeCells('A1:M1');
+      ws1.getCell('A1').value = `INSTITUTO TECNOLÓGICO TESLAVI — REPORTE FINANCIERO ${c.desde} al ${c.hasta} — Generado: ${fechaHoy}`;
+      ws1.getCell('A1').font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 12 };
       ws1.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF06231A' } };
       ws1.getCell('A1').alignment = { horizontal: 'center' };
+
       ws1.columns = [
-        { key: 'num', width: 6 }, { key: 'estudiante', width: 35 }, { key: 'ci', width: 13 },
-        { key: 'cajera', width: 20 }, { key: 'metodo', width: 14 }, { key: 'fecha', width: 18 }, { key: 'monto', width: 14 }
+        { key: 'num', width: 6 },
+        { key: 'estudiante', width: 35 },
+        { key: 'ci', width: 13 },
+        { key: 'semestre', width: 14 },
+        { key: 'cuota', width: 12 },
+        { key: 'estado', width: 14 },
+        { key: 'cajera', width: 20 },
+        { key: 'metodo', width: 14 },
+        { key: 'fecha', width: 18 },
+        { key: 'efectivo', width: 15 },
+        { key: 'transferencia', width: 18 },
+        { key: 'qr', width: 15 },
+        { key: 'monto_total', width: 16 }
       ];
+
       const hdr1 = ws1.getRow(2);
-      hdr1.values = ['#', 'Estudiante', 'CI', 'Cajera', 'Método', 'Fecha y Hora', 'Monto (Bs)'];
+      hdr1.values = ['#', 'Estudiante', 'CI', 'Semestre', 'Cuota', 'Estado', 'Cajera', 'Método', 'Fecha y Hora', 'Efectivo (Bs)', 'Transferencia (Bs)', 'QR (Bs)', 'Monto Total (Bs)'];
       hdr1.font = { bold: true, color: { argb: 'FFFFFFFF' } };
       hdr1.eachCell(cell => cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF146C46' } });
+
       c.pagos.forEach((p, i) => {
         const cajera = c.userMap.get(p.registrado_por) || 'Desconocido';
         const est = p.estudiantes || {};
         const fecha = new Date(p.fecha_pago).toLocaleString('es-BO');
-        ws1.addRow([i + 1, `${est.apellidos || ''} ${est.nombres || ''}`.trim(), est.ci || '', cajera, p.metodo_pago, fecha, Number(p.monto)]);
+        const semestre = est.semestre || '-';
+        const cuota = p.cuotas?.numero_cuota ? `Cuota ${p.cuotas.numero_cuota}` : '-';
+        const estado = est.estado_financiero || 'PAGADO';
+        const met = (p.metodo_pago || '').toLowerCase().trim();
+        const ef = met === 'efectivo' ? Number(p.monto) : 0;
+        const tr = met === 'transferencia' ? Number(p.monto) : 0;
+        const qr = met === 'qr' ? Number(p.monto) : 0;
+        const total = Number(p.monto);
+
+        ws1.addRow([
+          i + 1,
+          `${est.apellidos || ''} ${est.nombres || ''}`.trim(),
+          est.ci || '',
+          semestre,
+          cuota,
+          estado,
+          cajera,
+          p.metodo_pago,
+          fecha,
+          ef,
+          tr,
+          qr,
+          total
+        ]);
       });
-      const totalRow = ws1.addRow(['', '', '', '', '', 'TOTAL', c.totalGeneral]);
+
+      const totalRow = ws1.addRow(['', '', '', '', '', '', '', '', 'TOTALES', c.totalEfectivo || 0, c.totalTransferencia || 0, c.totalQR || 0, c.totalGeneral]);
       totalRow.font = { bold: true };
-      totalRow.getCell(7).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCE5D6' } };
+      [10, 11, 12, 13].forEach(colIndex => {
+        totalRow.getCell(colIndex).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCE5D6' } };
+      });
 
       // Hoja 2: Resumen
       const ws2 = wb.addWorksheet('Resumen');
@@ -7881,7 +8000,7 @@
         const hdr3 = ws3.getRow(2);
         hdr3.values = ['Estudiante', 'CI', 'Saldo Pendiente', 'Cuotas Vencidas', 'Estado'];
         hdr3.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-        hdr3.eachCell(c => c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC62828' } });
+        hdr3.eachCell(cell => cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC62828' } });
         window.moroCache.forEach(e => ws3.addRow([`${e.apellidos} ${e.nombres}`, e.ci, Number(e.saldo), e.cuotas_vencidas, e.estado_financiero]));
       }
 
