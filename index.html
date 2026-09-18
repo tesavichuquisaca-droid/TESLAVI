@@ -6277,9 +6277,15 @@
         return;
       }
 
+      const esAdmin = (window.usuarioActual?.rol === 'Administrador' || window.usuarioActual?.rol === 'ADMIN' || window.usuarioActual?.rol === 'SuperAdmin' || window.usuarioActual?.rol === 'Admin');
+
       tbody.innerHTML = data.map(r => {
         const p = r.pagos;
         if (!p) return '';
+        const msDiferencia = Date.now() - new Date(p.fecha_pago).getTime();
+        const dentroDe1Hora = msDiferencia <= (60 * 60 * 1000);
+        const puedeAnular = !p.anulado && (esAdmin || dentroDe1Hora);
+
         return `
           <tr>
             <td style="text-align:center; font-family:var(--f-datos);">${r.numero_recibo}</td>
@@ -6294,7 +6300,7 @@
               <button type="button" style="background:#FBEAE9; color:#D32F2F; border:1px solid #F3C6C2; padding:5px 12px; border-radius:var(--r-xs); font-size:11.5px; font-weight:700; cursor:pointer;" onclick="window.reimprimirRecibo('${p.id}')">PDF</button>
               <button type="button" style="background:#E3F2FD; color:#1565C0; border:1px solid #BBDEFB; padding:5px 12px; border-radius:var(--r-xs); font-size:11.5px; font-weight:700; cursor:pointer;" onclick="window.imprimirReciboDirecto('${p.id}')">Imprimir</button>
               <button type="button" style="background:#E1F7EA; color:#1F9254; border:1px solid #BEEAD0; padding:5px 12px; border-radius:var(--r-xs); font-size:11.5px; font-weight:700; cursor:pointer;" onclick="window.enviarReciboWhatsApp('${p.id}')">WhatsApp</button>
-              ${!p.anulado ? `<button type="button" style="background:#FFF3E0; color:#D97706; border:1px solid #FCD9A8; padding:5px 12px; border-radius:var(--r-xs); font-size:11.5px; font-weight:700; cursor:pointer; margin-left:4px;" onclick="window.abrirModalAnularPago('${p.id}', '${r.numero_recibo}')">Anular</button>` : ''}
+              ${puedeAnular ? `<button type="button" style="background:#FFF3E0; color:#D97706; border:1px solid #FCD9A8; padding:5px 12px; border-radius:var(--r-xs); font-size:11.5px; font-weight:700; cursor:pointer; margin-left:4px;" onclick="window.abrirModalAnularPago('${p.id}', '${r.numero_recibo}', '${p.fecha_pago}')">Anular</button>` : ''}
             </td>
           </tr>
         `;
@@ -6515,20 +6521,38 @@
     };
 
     let pagoIdAnularActivo = null;
+    let pagoFechaAnularActiva = null;
 
-    window.abrirModalAnularPago = function (pagoId, numeroRecibo) {
+    window.abrirModalAnularPago = function (pagoId, numeroRecibo, fechaPago) {
       pagoIdAnularActivo = pagoId;
+      pagoFechaAnularActiva = fechaPago;
       document.getElementById('lblReciboAnular').textContent = numeroRecibo;
       document.getElementById('anularMotivo').value = '';
       const msg = document.getElementById('mensajeModalAnularPago');
       msg.style.display = 'none';
       msg.className = 'mensaje';
+
+      const esAdmin = (window.usuarioActual?.rol === 'Administrador' || window.usuarioActual?.rol === 'ADMIN' || window.usuarioActual?.rol === 'SuperAdmin' || window.usuarioActual?.rol === 'Admin');
+      if (!esAdmin && fechaPago) {
+        const msDif = Date.now() - new Date(fechaPago).getTime();
+        if (msDif > 60 * 60 * 1000) {
+          msg.className = 'mensaje error visible';
+          msg.textContent = 'Ha transcurrido más de 1 hora desde que se registró este pago. Solo un Administrador puede anularlo.';
+          msg.style.display = 'block';
+          document.getElementById('btnConfirmarAnularPago').disabled = true;
+          document.getElementById('modalAnularPago').classList.add('activo');
+          return;
+        }
+      }
+
+      document.getElementById('btnConfirmarAnularPago').disabled = false;
       document.getElementById('modalAnularPago').classList.add('activo');
     };
 
     window.cerrarModalAnularPago = function () {
       document.getElementById('modalAnularPago').classList.remove('activo');
       pagoIdAnularActivo = null;
+      pagoFechaAnularActiva = null;
     };
 
     window.confirmarAnularPago = async function () {
@@ -6536,6 +6560,17 @@
       const motivo = document.getElementById('anularMotivo').value.trim();
       const msg = document.getElementById('mensajeModalAnularPago');
       const btn = document.getElementById('btnConfirmarAnularPago');
+
+      const esAdmin = (window.usuarioActual?.rol === 'Administrador' || window.usuarioActual?.rol === 'ADMIN' || window.usuarioActual?.rol === 'SuperAdmin' || window.usuarioActual?.rol === 'Admin');
+      if (!esAdmin && pagoFechaAnularActiva) {
+        const msDif = Date.now() - new Date(pagoFechaAnularActiva).getTime();
+        if (msDif > 60 * 60 * 1000) {
+          msg.className = 'mensaje error visible';
+          msg.textContent = 'Ha transcurrido más de 1 hora desde el registro de este pago. Solo un Administrador puede anularlo.';
+          msg.style.display = 'block';
+          return;
+        }
+      }
 
       if (!motivo || motivo.length < 5) {
         msg.className = 'mensaje error visible';
