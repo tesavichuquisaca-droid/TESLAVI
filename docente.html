@@ -4,8 +4,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TESLAVI · Portal Docente</title>
-  <meta name="description" content="Portal del Docente — Instituto Tecnológico TESLAVI">
+  <title>TESLAVI Â· Portal Docente</title>
+  <meta name="description" content="Portal del Docente â€” Instituto TecnolÃ³gico TESLAVI">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -14,17 +14,17 @@
     rel="stylesheet">
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <!-- Librería ExcelJS para exportar planillas de notas/asistencia con diseño -->
+  <!-- LibrerÃ­a ExcelJS para exportar planillas de notas/asistencia con diseÃ±o -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
-  <!-- Librería jsPDF para generación de PDFs -->
+  <!-- LibrerÃ­a jsPDF para generaciÃ³n de PDFs -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 
   <!-- Fase 0 (Corte): tokens/base/componentes compartidos con index.html -->
   <link rel="stylesheet" href="assets/css/01-tokens.css">
   <!-- Fase 1: aplicar el tema ANTES del primer render (ver index.html).
-       No sigue prefers-color-scheme todavía: el modo oscuro se termina
-       de auditar en Fase 2/3, solo se activa si el usuario lo eligió. -->
+       No sigue prefers-color-scheme todavÃ­a: el modo oscuro se termina
+       de auditar en Fase 2/3, solo se activa si el usuario lo eligiÃ³. -->
   <script>
     (function () {
       try {
@@ -80,10 +80,10 @@
 
     .card { background: #fff; border: 1px solid var(--borde); box-shadow: var(--sombra-1); }
 
-    /* Cabeceras de Calificar/Asistencia/Historial: título+desc a la izquierda,
+    /* Cabeceras de Calificar/Asistencia/Historial: tÃ­tulo+desc a la izquierda,
        acciones (exportar/volver) a la derecha. flex-wrap va sin media query
-       porque el desborde no depende solo del ancho de pantalla sino también
-       de cuántos botones entran — así nunca se corta la página completa. */
+       porque el desborde no depende solo del ancho de pantalla sino tambiÃ©n
+       de cuÃ¡ntos botones entran â€” asÃ­ nunca se corta la pÃ¡gina completa. */
     .cabecera-seccion { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
     .fila-acciones-cabecera { display: flex; gap: 8px; flex-wrap: wrap; }
     .grupo-nav-dia { display: flex; align-items: center; gap: 4px; margin-left: auto; }
@@ -99,7 +99,7 @@
     #seccion-calificar .card { border-radius: var(--radio); }
 
     /* ============================================================
-       RESPONSIVE — Sistema adaptativo para celular y computadora
+       RESPONSIVE â€” Sistema adaptativo para celular y computadora
        ============================================================ */
 
     @media (max-width: 1024px) {
@@ -125,9 +125,9 @@
       #contenedorMisMaterias button { width: 100% !important; }
       .materia-table { display: block; overflow-x: auto; white-space: nowrap; }
       .topbar { height: 56px; }
-      /* Botones de exportar/volver y de navegación de día: en desktop su
-         padding compacto anda bien con mouse, pero en móvil quedan por
-         debajo del objetivo táctil mínimo de 44px. */
+      /* Botones de exportar/volver y de navegaciÃ³n de dÃ­a: en desktop su
+         padding compacto anda bien con mouse, pero en mÃ³vil quedan por
+         debajo del objetivo tÃ¡ctil mÃ­nimo de 44px. */
       .fila-acciones-cabecera button { min-height: 44px; }
       .grupo-nav-dia button { min-height: 44px; min-width: 44px; }
     }
@@ -138,8 +138,8 @@
       .form-titulo { font-size: 22px; }
       .campo input, .select-css { font-size: 16px; }
       .topbar { padding: 0 12px; }
-      /* minmax(320px,1fr) puede desbordar la página en pantallas <344px
-         (320 de mínimo + padding del content-area); una sola columna
+      /* minmax(320px,1fr) puede desbordar la pÃ¡gina en pantallas <344px
+         (320 de mÃ­nimo + padding del content-area); una sola columna
          evita el scroll horizontal accidental en esos equipos. */
       #contenedorMisMaterias { grid-template-columns: 1fr; }
     }
@@ -153,24 +153,24 @@
     <aside class="panel-marca">
       <div class="grid-tecnica" aria-hidden="true"></div>
       <div class="marca-cabecera">
-        <p class="marca-eyebrow">Instituto Tecnológico TESLAVI</p>
+        <p class="marca-eyebrow">Instituto TecnolÃ³gico TESLAVI</p>
         <div class="sello">
           <img src="assets/img/teslavi.jpg" alt="Logo TESLAVI" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block;">
         </div>
         <h1 class="marca-titulo">Portal Docente</h1>
         <p class="marca-subtitulo">
-          Acceso exclusivo para catedráticos del Instituto Tecnológico TESLAVI —
+          Acceso exclusivo para catedrÃ¡ticos del Instituto TecnolÃ³gico TESLAVI â€”
           registre calificaciones y asistencia de sus materias asignadas.
         </p>
       </div>
       <dl class="marca-pie">
         <div>
           <dt>Carrera</dt>
-          <dd>Téc. Superior Mec. Automotriz</dd>
+          <dd>TÃ©c. Superior Mec. Automotriz</dd>
         </div>
         <div>
           <dt>Plataforma</dt>
-          <dd>Supabase · PostgreSQL</dd>
+          <dd>Supabase Â· PostgreSQL</dd>
         </div>
       </dl>
     </aside>
@@ -178,8 +178,8 @@
     <main class="panel-acceso">
       <div class="form-wrap">
         <p class="form-eyebrow">Acceso al sistema</p>
-        <h2 class="form-titulo">Iniciar sesión</h2>
-        <p class="form-desc">Ingrese con el Carnet de Identidad y la contraseña asignados por administración.</p>
+        <h2 class="form-titulo">Iniciar sesiÃ³n</h2>
+        <p class="form-desc">Ingrese con el Carnet de Identidad y la contraseÃ±a asignados por administraciÃ³n.</p>
 
         <form id="formLoginDocente" novalidate>
           <div class="campo">
@@ -187,7 +187,7 @@
             <input type="text" id="ci" name="ci" inputmode="numeric" autocomplete="username" maxlength="10" required placeholder="Ej. 1234567">
           </div>
           <div class="campo">
-            <label for="contrasena">Contraseña</label>
+            <label for="contrasena">ContraseÃ±a</label>
             <input type="password" id="contrasena" name="contrasena" autocomplete="current-password" required>
           </div>
 
@@ -200,9 +200,9 @@
         </form>
 
         <div class="form-pie">
-          <strong>Nota:</strong> su usuario es su Carnet de Identidad. Si olvidó su
-          contraseña, comuníquese con administración para su restablecimiento.<br><br>
-          ¿Es administrador? <a href="index.html" style="color: var(--verde-vivo-texto); font-weight: 600;">Ingrese por acá</a>.
+          <strong>Nota:</strong> su usuario es su Carnet de Identidad. Si olvidÃ³ su
+          contraseÃ±a, comunÃ­quese con administraciÃ³n para su restablecimiento.<br><br>
+          Â¿Es administrador? <a href="index.html" style="color: var(--verde-vivo-texto); font-weight: 600;">Ingrese por acÃ¡</a>.
         </div>
       </div>
     </main>
@@ -235,20 +235,20 @@
             <img src="assets/img/teslavi.jpg" alt="Logo TESLAVI" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block;">
           </div>
           <div style="font-family: var(--f-datos); font-size: 11px; color: var(--turquesa-claro); text-align: center; text-transform: uppercase; letter-spacing: 0.05em; line-height: 1.6;">
-            Carrera:<br>Téc. Superior<br>Mec. Automotriz</div>
+            Carrera:<br>TÃ©c. Superior<br>Mec. Automotriz</div>
         </div>
 
         <div class="sidebar-footer" style="padding: var(--e-6); border-top: 1px solid rgba(255,255,255,0.08);">
           <button id="btnSalir"
             style="width: 100%; background: rgba(255,255,255,0.1); color: white; border: none; padding: 10px; border-radius: var(--radio); cursor: pointer; font-weight: 500; transition: background 0.2s;">
-            Cerrar sesión
+            Cerrar sesiÃ³n
           </button>
         </div>
       </aside>
 
       <div class="main-content">
         <header class="topbar">
-          <button class="btn-hamburguesa" id="btnHamburguesa" onclick="toggleSidebar()" aria-label="Abrir menú">
+          <button class="btn-hamburguesa" id="btnHamburguesa" onclick="toggleSidebar()" aria-label="Abrir menÃº">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <line x1="3" y1="6" x2="21" y2="6"/>
               <line x1="3" y1="12" x2="21" y2="12"/>
@@ -265,8 +265,8 @@
           </div>
         </header>
 
-        <!-- Banda de calibre (§3.3 del brief): indicador de contexto en vivo
-             del módulo activo. En Calificar: alumnos con Nota Final cargada
+        <!-- Banda de calibre (Â§3.3 del brief): indicador de contexto en vivo
+             del mÃ³dulo activo. En Calificar: alumnos con Nota Final cargada
              sobre el total, mientras el docente escribe. -->
         <div class="banda-calibre" id="bandaCalibre" role="progressbar" aria-valuemin="0" aria-valuemax="100"
              aria-valuenow="0" aria-label="Progreso de carga de notas" title="0 de 0 alumnos con nota cargada">
@@ -313,7 +313,7 @@
                          <th style="width:12%">Asistencia (20)</th>
                          <th style="width:14%">Destreza (20)</th>
                          <th style="width:14%">Investig. (20)</th>
-                         <th style="width:14%">Prácticas (10)</th>
+                         <th style="width:14%">PrÃ¡cticas (10)</th>
                          <th style="width:14%">Examen (30)</th>
                          <th style="width:12%">Subtotal T1</th>
                       </tr>
@@ -335,7 +335,7 @@
                          <th style="width:12%">Asistencia (20)</th>
                          <th style="width:14%">Destreza (20)</th>
                          <th style="width:14%">Investig. (20)</th>
-                         <th style="width:14%">Prácticas (10)</th>
+                         <th style="width:14%">PrÃ¡cticas (10)</th>
                          <th style="width:14%">Examen (30)</th>
                          <th style="width:12%">Subtotal T2</th>
                       </tr>
@@ -388,15 +388,15 @@
                 </div>
             </div>
 
-            <!-- Acciones rápidas — §6.7 del brief: marcar todos presentes es
-                 el caso más común y ahorra tocar fila por fila. -->
+            <!-- Acciones rÃ¡pidas â€” Â§6.7 del brief: marcar todos presentes es
+                 el caso mÃ¡s comÃºn y ahorra tocar fila por fila. -->
             <div style="display:flex; gap:8px; margin-top:16px; align-items:center; flex-wrap:wrap;">
                 <button type="button" class="btn-secundario" onclick="window.marcarTodosPresentes()">Marcar todos presentes</button>
                 <button type="button" class="btn-secundario" onclick="window.limpiarAsistenciaDia()">Limpiar</button>
                 <div class="grupo-nav-dia">
-                  <button type="button" class="btn-secundario" style="padding:6px 10px;" onclick="window.cambiarDiaAsistencia(-1)" aria-label="Día anterior">‹</button>
+                  <button type="button" class="btn-secundario" style="padding:6px 10px;" onclick="window.cambiarDiaAsistencia(-1)" aria-label="DÃ­a anterior">â€¹</button>
                   <button type="button" class="btn-secundario" style="padding:6px 12px; font-size:13px;" onclick="window.irAHoyAsistencia()">Hoy</button>
-                  <button type="button" class="btn-secundario" style="padding:6px 10px;" onclick="window.cambiarDiaAsistencia(1)" aria-label="Día siguiente">›</button>
+                  <button type="button" class="btn-secundario" style="padding:6px 10px;" onclick="window.cambiarDiaAsistencia(1)" aria-label="DÃ­a siguiente">â€º</button>
                 </div>
             </div>
 
@@ -428,7 +428,7 @@
                 </div>
                 <div class="fila-acciones-cabecera">
                    <button onclick="window.abrirModalCorregirDia()" class="btn-ingresar" style="width: auto; padding: 8px 12px; margin: 0; background: #FF9800; border: none; color: #fff; display: flex; align-items: center; gap: 6px;" title="Corregir Fecha / Editar Lista">
-                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4z"/></svg> Corregir Día
+                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4z"/></svg> Corregir DÃ­a
                    </button>
                    <button onclick="window.exportarExcelHistorial()" class="btn-ingresar" style="width: auto; padding: 8px 12px; margin: 0; background: #1B8557;" title="Exportar Historial a Excel"><svg class="ui-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h2"/><path d="M8 17h2"/><path d="M14 13h2"/><path d="M14 17h2"/></svg> Excel</button>
                    <button onclick="window.exportarPDFHistorial()" class="btn-ingresar" style="width: auto; padding: 8px 12px; margin: 0; background: #D32F2F;" title="Exportar Historial a PDF"><svg class="ui-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M10 13v4"/><path d="M10 13h2.5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5H10"/></svg> PDF</button>
@@ -450,15 +450,15 @@
     </div>
   </div>
 
-  <!-- MODAL: CORREGIR DÍA ASISTENCIA -->
+  <!-- MODAL: CORREGIR DÃA ASISTENCIA -->
   <div id="modalCorregirDia" class="modal" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5); z-index:9999; display:none; align-items:center; justify-content:center; padding:16px;">
     <div style="background:white; border-radius:12px; max-width:450px; width:100%; padding:24px; box-shadow:0 10px 25px rgba(0,0,0,0.2);">
-      <h3 style="margin-bottom:12px; color:var(--verde-950); font-family:var(--f-display); font-size:18px;">Corregir o Eliminar Día de Asistencia</h3>
+      <h3 style="margin-bottom:12px; color:var(--verde-950); font-family:var(--f-display); font-size:18px;">Corregir o Eliminar DÃ­a de Asistencia</h3>
       <p style="font-size:14px; color:var(--texto-suave); margin-bottom:20px; line-height:1.4;">
-        Escribe la fecha que se guardó mal (Ej. 123-07-2026). Puedes cambiarla a una fecha correcta y editar la lista, o eliminarla por completo.
+        Escribe la fecha que se guardÃ³ mal (Ej. 123-07-2026). Puedes cambiarla a una fecha correcta y editar la lista, o eliminarla por completo.
       </p>
       <div class="campo">
-        <label for="inputFechaOriginal" style="font-weight:600; font-size:13px; color:var(--texto);">Fecha Original (la que está mal)</label>
+        <label for="inputFechaOriginal" style="font-weight:600; font-size:13px; color:var(--texto);">Fecha Original (la que estÃ¡ mal)</label>
         <input type="text" id="inputFechaOriginal" class="select-css" placeholder="Ej. 123-07-2026">
       </div>
       <div class="campo" style="margin-top:16px;">
@@ -467,7 +467,7 @@
       </div>
       <div class="form-actions" style="margin-top:24px; gap:12px; display:flex; flex-wrap:wrap; justify-content:flex-end;">
         <button type="button" class="btn-secundario" onclick="document.getElementById('modalCorregirDia').style.display='none'" style="margin:0; padding:8px 16px;">Cancelar</button>
-        <button type="button" class="btn-ingresar" onclick="window.eliminarDiaCompleto()" style="margin:0; padding:8px 16px; background:#D32F2F; border:none;">Eliminar Día</button>
+        <button type="button" class="btn-ingresar" onclick="window.eliminarDiaCompleto()" style="margin:0; padding:8px 16px; background:#D32F2F; border:none;">Eliminar DÃ­a</button>
         <button type="button" class="btn-ingresar" onclick="window.corregirYEditarLista()" style="margin:0; padding:8px 16px;" id="btnCorregirLista">Mover y Editar</button>
       </div>
     </div>
@@ -475,18 +475,18 @@
 
   <script>
 
-    /* Fase 0 (Corte, §12.1 del brief): antes esto pintaba una barra roja
-       con el stack trace tapando la pantalla del docente en producción.
-       El toast genérico de error llega en la Fase 2. */
+    /* Fase 0 (Corte, Â§12.1 del brief): antes esto pintaba una barra roja
+       con el stack trace tapando la pantalla del docente en producciÃ³n.
+       El toast genÃ©rico de error llega en la Fase 2. */
     window.onerror = function (message, source, lineno, colno, error) {
       console.error('Error global:', message, 'en', source + ':' + lineno + ':' + colno, error);
     };
 
     /* ============================================================
-       CONFIGURACIÓN DE SUPABASE
-       Misma clave pública (anon key) que usa index.html y
-       estudiante.html — es seguro tenerla visible en el navegador,
-       el acceso real lo controlan las políticas RLS en Supabase.
+       CONFIGURACIÃ“N DE SUPABASE
+       Misma clave pÃºblica (anon key) que usa index.html y
+       estudiante.html â€” es seguro tenerla visible en el navegador,
+       el acceso real lo controlan las polÃ­ticas RLS en Supabase.
        ============================================================ */
     const SUPABASE_URL = "https://uiehqupijamcjptasqfl.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_aG68lfRUBKhEsYIHKf2t1w_zS8VgyzP";
@@ -509,7 +509,7 @@
     function ponerCargando(activo) {
       btnIngresar.disabled = activo;
       btnIngresar.classList.toggle("cargando", activo);
-      btnTexto.textContent = activo ? "Verificando…" : "Ingresar al sistema";
+      btnTexto.textContent = activo ? "Verificandoâ€¦" : "Ingresar al sistema";
     }
 
     function getDeviceInfo() {
@@ -531,9 +531,9 @@
     }
 
     /* El login docente NO usa Supabase Auth (valida CI + password_temporal
-       directo contra la tabla "docentes"), así que no hay auth.uid() para
+       directo contra la tabla "docentes"), asÃ­ que no hay auth.uid() para
        la FK de auditoria.usuario_id. Se registra con usuario_id null y el
-       nombre/CI del docente dentro del texto de la acción. Ver nota SQL. */
+       nombre/CI del docente dentro del texto de la acciÃ³n. Ver nota SQL. */
     window.registrarAuditoria = async function (accion, modulo) {
       try {
         if (!window.usuarioLogueado) return;
@@ -546,7 +546,7 @@
           registro_id: null
         });
       } catch (e) {
-        console.warn("No se pudo registrar la auditoría", e);
+        console.warn("No se pudo registrar la auditorÃ­a", e);
       }
     };
 
@@ -558,7 +558,7 @@
       const contrasena = document.getElementById("contrasena").value;
 
       if (!ci || !contrasena) {
-        mostrarError("Ingrese su Carnet de Identidad y contraseña.");
+        mostrarError("Ingrese su Carnet de Identidad y contraseÃ±a.");
         return;
       }
 
@@ -570,7 +570,7 @@
           return;
         }
         if (data.password_temporal !== contrasena) {
-          mostrarError("Contraseña incorrecta.");
+          mostrarError("ContraseÃ±a incorrecta.");
           return;
         }
         window.usuarioLogueado = data;
@@ -582,8 +582,8 @@
       }
     });
 
-    /* El ítem del sidebar es un <div onclick>, no <button> — sin esto
-       queda fuera del orden de Tab (§Accesibilidad crítica). */
+    /* El Ã­tem del sidebar es un <div onclick>, no <button> â€” sin esto
+       queda fuera del orden de Tab (Â§Accesibilidad crÃ­tica). */
     document.addEventListener('DOMContentLoaded', function () {
       document.querySelectorAll('.menu-item[onclick]').forEach(function (item) {
         item.setAttribute('tabindex', '0');
@@ -604,7 +604,7 @@
       document.getElementById("labelRol").textContent = "Docente";
       window.cargarMisMaterias();
       window.cargarConfigTrimestres();
-      window.registrarAuditoria("Inició sesión en el portal docente", "Autenticación");
+      window.registrarAuditoria("IniciÃ³ sesiÃ³n en el portal docente", "AutenticaciÃ³n");
     }
 
     /* Fechas de Trimestre 1 / Trimestre 2 (config global, la define Admin).
@@ -622,7 +622,7 @@
     });
 
     // =====================================================
-    // RESPONSIVE: Toggle del Sidebar en móvil/tablet
+    // RESPONSIVE: Toggle del Sidebar en mÃ³vil/tablet
     // =====================================================
     function toggleSidebar() {
       const sidebar = document.getElementById('sidebarPrincipal');
@@ -638,66 +638,66 @@
       if (overlay) overlay.classList.remove('visible');
     }
 
-    // --- Plan de Estudios (duplicado a propósito — ver nota en estudiante.html) ---
+    // --- Plan de Estudios (duplicado a propÃ³sito â€” ver nota en estudiante.html) ---
     const planEstudios = [
       { semestre: "Primer Semestre (30 Hrs/Semana)", materias: [
         { codigo: "MOG 100", nombre: "Motores a Gasolina I", horas: 6 },
-        { codigo: "MAA 100", nombre: "Matemática Automotriz", horas: 4 },
+        { codigo: "MAA 100", nombre: "MatemÃ¡tica Automotriz", horas: 4 },
         { codigo: "ELA 100", nombre: "Electricidad Automotriz I", horas: 6 },
         { codigo: "SOM 100", nombre: "Seguridad Ocupacional y Medio Ambiente", horas: 4 },
-        { codigo: "MEA 100", nombre: "Metrología Automotriz", horas: 4 },
-        { codigo: "DTA 100", nombre: "Dibujo Técnico Automotriz I", horas: 2 },
-        { codigo: "QUA 100", nombre: "Química Automotriz", horas: 4 }
+        { codigo: "MEA 100", nombre: "MetrologÃ­a Automotriz", horas: 4 },
+        { codigo: "DTA 100", nombre: "Dibujo TÃ©cnico Automotriz I", horas: 2 },
+        { codigo: "QUA 100", nombre: "QuÃ­mica Automotriz", horas: 4 }
       ]},
       { semestre: "Segundo Semestre (30 Hrs/Semana)", materias: [
-        { codigo: "INT 200", nombre: "Inglés Técnico", horas: 4 },
-        { codigo: "CHS 200", nombre: "Chapería y Soldadura", horas: 6 },
+        { codigo: "INT 200", nombre: "InglÃ©s TÃ©cnico", horas: 4 },
+        { codigo: "CHS 200", nombre: "ChaperÃ­a y Soldadura", horas: 6 },
         { codigo: "ELA 200", nombre: "Electricidad Automotriz II", horas: 6 },
         { codigo: "MOG 200", nombre: "Motores a Gasolina II", horas: 6 },
-        { codigo: "DTA 200", nombre: "Dibujo Técnico Automotriz II", horas: 4 },
-        { codigo: "FIS 200", nombre: "Física Automotriz", horas: 4 }
+        { codigo: "DTA 200", nombre: "Dibujo TÃ©cnico Automotriz II", horas: 4 },
+        { codigo: "FIS 200", nombre: "FÃ­sica Automotriz", horas: 4 }
       ]},
       { semestre: "Tercer Semestre (30 Hrs/Semana)", materias: [
         { codigo: "TRA 300", nombre: "Transmisiones I", horas: 8 },
         { codigo: "MOD 300", nombre: "Motores Diesel I", horas: 4 },
         { codigo: "ELA 300", nombre: "Electricidad Automotriz III", horas: 4 },
         { codigo: "MOG 300", nombre: "Motores a Gasolina III", horas: 6 },
-        { codigo: "TER 300", nombre: "Termodinámica", horas: 2 },
-        { codigo: "ETA 300", nombre: "Electrónica Automotriz I", horas: 6 }
+        { codigo: "TER 300", nombre: "TermodinÃ¡mica", horas: 2 },
+        { codigo: "ETA 300", nombre: "ElectrÃ³nica Automotriz I", horas: 6 }
       ]},
       { semestre: "Cuarto Semestre (30 Hrs/Semana)", materias: [
         { codigo: "MOD 400", nombre: "Motores Diesel II", horas: 4 },
         { codigo: "TRA 400", nombre: "Transmisiones II", horas: 4 },
         { codigo: "MOG 400", nombre: "Motores a Gasolina IV", horas: 6 },
-        { codigo: "ETA 400", nombre: "Electrónica Automotriz II", horas: 6 },
+        { codigo: "ETA 400", nombre: "ElectrÃ³nica Automotriz II", horas: 6 },
         { codigo: "EMP 400", nombre: "Emprendimiento Productivo", horas: 4 },
-        { codigo: "IAG 400", nombre: "Inyección a Gasolina I", horas: 6 }
+        { codigo: "IAG 400", nombre: "InyecciÃ³n a Gasolina I", horas: 6 }
       ]},
       { semestre: "Quinto Semestre (30 Hrs/Semana)", materias: [
-        { codigo: "IAG 500", nombre: "Inyección a Gasolina II", horas: 6 },
+        { codigo: "IAG 500", nombre: "InyecciÃ³n a Gasolina II", horas: 6 },
         { codigo: "TRA 500", nombre: "Transmisiones III", horas: 4 },
-        { codigo: "TMG 500", nombre: "Taller de Modalidad de Graduación I", horas: 4 },
+        { codigo: "TMG 500", nombre: "Taller de Modalidad de GraduaciÃ³n I", horas: 4 },
         { codigo: "LAD 500", nombre: "Laboratorio Diesel I", horas: 4 },
-        { codigo: "ETA 500", nombre: "Electrónica Automotriz III", horas: 6 },
-        { codigo: "IED 500", nombre: "Inyección Electrónica Diesel I", horas: 4 },
-        { codigo: "NEU 500", nombre: "Neumática", horas: 2 }
+        { codigo: "ETA 500", nombre: "ElectrÃ³nica Automotriz III", horas: 6 },
+        { codigo: "IED 500", nombre: "InyecciÃ³n ElectrÃ³nica Diesel I", horas: 4 },
+        { codigo: "NEU 500", nombre: "NeumÃ¡tica", horas: 2 }
       ]},
       { semestre: "Sexto Semestre (30 Hrs/Semana)", materias: [
-        { codigo: "HID 600", nombre: "Hidráulica", horas: 2 },
-        { codigo: "DAU 600", nombre: "Diagnóstico del Automóvil", horas: 4 },
-        { codigo: "IED 600", nombre: "Inyección Electrónica Diesel II", horas: 4 },
+        { codigo: "HID 600", nombre: "HidrÃ¡ulica", horas: 2 },
+        { codigo: "DAU 600", nombre: "DiagnÃ³stico del AutomÃ³vil", horas: 4 },
+        { codigo: "IED 600", nombre: "InyecciÃ³n ElectrÃ³nica Diesel II", horas: 4 },
         { codigo: "TRA 600", nombre: "Transmisiones IV", horas: 4 },
-        { codigo: "TMG 600", nombre: "Taller de Modalidad de Graduación II", horas: 4 },
+        { codigo: "TMG 600", nombre: "Taller de Modalidad de GraduaciÃ³n II", horas: 4 },
         { codigo: "LAD 600", nombre: "Laboratorio Diesel II", horas: 4 },
-        { codigo: "IAG 600", nombre: "Inyección a Gasolina III", horas: 4 },
-        { codigo: "MAP 600", nombre: "Maquinaria Agrícola y Pesada", horas: 4 }
+        { codigo: "IAG 600", nombre: "InyecciÃ³n a Gasolina III", horas: 4 },
+        { codigo: "MAP 600", nombre: "Maquinaria AgrÃ­cola y Pesada", horas: 4 }
       ]}
     ];
 
     /* ============================================================
-       MOTOR DE CALIFICACIÓN — Trimestres + Recuperatorio
-       (duplicado a propósito en docente.html / index.html / estudiante.html,
-       mismo criterio que planEstudios: no hay build ni módulos compartidos)
+       MOTOR DE CALIFICACIÃ“N â€” Trimestres + Recuperatorio
+       (duplicado a propÃ³sito en docente.html / index.html / estudiante.html,
+       mismo criterio que planEstudios: no hay build ni mÃ³dulos compartidos)
        ============================================================ */
     function obtenerNotaObj(est, codigo) {
       let calObj = {};
@@ -755,7 +755,7 @@
       const sinEvaluar = t1total === 0 && t2total === 0;
       return { n, a1, a2, t1total, t2total, semestral, habilitaRecuperatorio, notaFinal, aprobado: notaFinal >= 61, sinEvaluar };
     }
-    function fmtNum(n) { return Number.isInteger(n) ? String(n) : n.toFixed(1); }
+    function fmtNum(n) { return (Math.round(n * 100) / 100).toFixed(2); }
     function estadoBadgeHtml(sinEvaluar, aprobado) {
       if (sinEvaluar) return `<span style="color:var(--texto-suave); font-size:13px;">Sin evaluar</span>`;
       return aprobado
@@ -763,15 +763,15 @@
         : `<span class="materia-badge" style="background: rgba(211,47,47,0.1); color: #D32F2F;">Reprobado</span>`;
     }
 
-    /* Logo institucional para PDF/Excel/Word — mismo helper que index.html
+    /* Logo institucional para PDF/Excel/Word â€” mismo helper que index.html
        (cacheado en base64, ver ese archivo para el detalle). Si el archivo
-       no está, los documentos se siguen generando igual, solo sin el logo. */
+       no estÃ¡, los documentos se siguen generando igual, solo sin el logo. */
     window._logoTeslaviBase64 = null;
     window.obtenerLogoTeslavi = async function () {
       if (window._logoTeslaviBase64) return window._logoTeslaviBase64;
       try {
         const resp = await fetch('assets/img/teslavi.jpg');
-        if (!resp.ok) throw new Error('No se encontró assets/img/teslavi.jpg');
+        if (!resp.ok) throw new Error('No se encontrÃ³ assets/img/teslavi.jpg');
         const blob = await resp.blob();
         window._logoTeslaviBase64 = await new Promise((resolve, reject) => {
           const reader = new FileReader();
@@ -839,7 +839,7 @@
             <div class="semestre-card" style="margin-bottom:0; border-left: 4px solid var(--verde-vivo-texto);">
                <div class="semestre-header" style="background:var(--superficie); color:var(--verde-950); padding: 16px;">
                   <div style="font-size:14px; font-weight:600;">${nombreMat}</div>
-                  <div style="font-size:12px; font-family:var(--f-datos); color:var(--texto-suave); margin-top:4px;"><span class="codigo-materia">${a.codigo}</span> · ${horasMat} hrs · Turno ${a.turno}</div>
+                  <div style="font-size:12px; font-family:var(--f-datos); color:var(--texto-suave); margin-top:4px;"><span class="codigo-materia">${a.codigo}</span> Â· ${horasMat} hrs Â· Turno ${a.turno}</div>
                </div>
                <div style="padding:16px; background:white; display:flex; gap:8px;">
                   <button onclick="window.abrirCalificaciones('${a.codigo}', '${nombreMat}', '${a.turno}', '${idSemestre}')" class="btn-ingresar" style="margin:0; flex:1; padding:8px 4px; font-size:12px;"><svg class="ui-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Calificaciones</button>
@@ -856,7 +856,7 @@
     };
 
     // ==========================================================
-    // CALIFICACIONES — Trimestre 1 + Trimestre 2 + Recuperatorio
+    // CALIFICACIONES â€” Trimestre 1 + Trimestre 2 + Recuperatorio
     // ==========================================================
     window.estudiantesCalificacionCache = [];
     window.materiaCalificacionActual = null;
@@ -866,7 +866,7 @@
       document.getElementById('seccion-calificar').classList.add('activa');
       document.getElementById('topbarRuta').textContent = `Mis Materias / Calificar / ${nombre}`;
       document.getElementById('tituloMateriaCalificar').textContent = nombre;
-      document.getElementById('subtituloMateriaCalificar').textContent = `Cód: ${codigo} · Semestre ${semestreId} · Turno ${turno}`;
+      document.getElementById('subtituloMateriaCalificar').textContent = `CÃ³d: ${codigo} Â· Semestre ${semestreId} Â· Turno ${turno}`;
 
       window.materiaCalificacionActual = codigo;
 
@@ -907,10 +907,10 @@
         const nombreCorto = `${est.apellidos} <span style="font-weight:400;">${est.nombres}</span>`;
 
         const campoPonderado = (tipoPrefijo, campo, max, crudaVal, ponderadoVal) => `
-          <div style="display:inline-flex; align-items:center; gap:2px;" title="Nota sobre 100 → se pondera automáticamente sobre ${max}">
-             <input type="number" min="0" max="100" class="select-css nota-cruda-input" style="width:42px; text-align:right; padding:4px 3px; font-size:12px;" data-tipo-cruda="${tipoPrefijo}_${campo}" data-max="${max}" value="${crudaVal}" placeholder="0-100" onchange="window.recalcularNotaPonderada(this)" onkeydown="window.manejarTeclaNota(event,this)">
+          <div style="display:inline-flex; align-items:center; gap:2px;" title="Nota sobre 100 â†’ se pondera automÃ¡ticamente sobre ${max}">
+             <input type="number" min="0" max="100" step="0.01" class="select-css nota-cruda-input" style="width:56px; text-align:right; padding:4px 3px; font-size:12px;" data-tipo-cruda="${tipoPrefijo}_${campo}" data-max="${max}" value="${crudaVal}" placeholder="0-100" onchange="window.recalcularNotaPonderada(this)" onkeydown="window.manejarTeclaNota(event,this)">
              <span style="font-size:10px; color:var(--texto-suave);">&rarr;</span>
-             <input type="number" min="0" max="${max}" class="select-css nota-input" style="width:34px; text-align:right; padding:4px 3px; font-size:12px; background:var(--fondo); color:var(--texto-suave);" data-tipo="${tipoPrefijo}_${campo}" value="${ponderadoVal}" readonly tabindex="-1">
+             <input type="number" min="0" max="${max}" step="0.01" class="select-css nota-input" style="width:48px; text-align:right; padding:4px 3px; font-size:12px; background:var(--fondo); color:var(--texto-suave);" data-tipo="${tipoPrefijo}_${campo}" value="${ponderadoVal}" readonly tabindex="-1">
              <span style="font-size:10px; color:var(--texto-suave);">/${max}</span>
           </div>`;
 
@@ -937,7 +937,7 @@
              <td class="resumen-t2-text" style="text-align:center;">${fmtNum(r.t2total)}</td>
              <td class="resumen-semestral-text" style="text-align:center; font-weight:600;">${fmtNum(r.semestral)}</td>
              <td style="text-align:center;">
-                <input type="number" min="0" max="100" class="select-css rec-input" style="width:70px; text-align:right; padding:4px 6px;" ${r.habilitaRecuperatorio ? '' : 'disabled'} value="${r.habilitaRecuperatorio && r.n.recuperatorio !== null ? r.n.recuperatorio : ''}" placeholder="${r.habilitaRecuperatorio ? '0-100' : '—'}" onchange="window.recalcularEstudiantePorId('${est.id}')" onkeydown="window.manejarTeclaNota(event,this)">
+                <input type="number" min="0" max="100" step="0.01" class="select-css rec-input" style="width:70px; text-align:right; padding:4px 6px;" ${r.habilitaRecuperatorio ? '' : 'disabled'} value="${r.habilitaRecuperatorio && r.n.recuperatorio !== null ? r.n.recuperatorio : ''}" placeholder="${r.habilitaRecuperatorio ? '0-100' : 'â€”'}" onchange="window.recalcularEstudiantePorId('${est.id}')" onkeydown="window.manejarTeclaNota(event,this)">
              </td>
              <td class="resumen-final-text" style="text-align:center; font-weight:bold; color: ${r.aprobado ? 'var(--verde-950)' : '#D32F2F'};">${fmtNum(r.notaFinal)}</td>
              <td class="resumen-estado-text">${estadoBadgeHtml(r.sinEvaluar, r.aprobado)}</td>
@@ -951,7 +951,7 @@
       window.actualizarBandaCalibre();
     };
 
-    /* Banda de calibre (§3.3): alumnos con Nota Final cargada / total,
+    /* Banda de calibre (Â§3.3): alumnos con Nota Final cargada / total,
        recalculada cada vez que se renderiza o se edita una celda. */
     window.actualizarBandaCalibre = function () {
       const banda = document.getElementById('bandaCalibre');
@@ -969,7 +969,7 @@
       banda.title = `${completados} de ${total} alumnos con nota cargada`;
     };
 
-    /* Navegación por teclado en las tablas de Calificar — §6.6 del brief:
+    /* NavegaciÃ³n por teclado en las tablas de Calificar â€” Â§6.6 del brief:
        Enter/flechas arriba-abajo saltan a la misma columna en la fila
        siguiente/anterior (como una planilla), Esc quita el foco. */
     window.manejarTeclaNota = function (event, inputEl) {
@@ -1005,8 +1005,8 @@
       window.recalcularEstudiantePorId(input.closest('tr').getAttribute('data-id'));
     };
 
-    /* Nota cruda (sobre 100) -> ponderación automática sobre el máximo del campo
-       (Destreza/Investig. 20, Prácticas 10, Examen 30). Ej: 100/100 -> 20/20, 50/100 -> 10/20. */
+    /* Nota cruda (sobre 100) -> ponderaciÃ³n automÃ¡tica sobre el mÃ¡ximo del campo
+       (Destreza/Investig. 20, PrÃ¡cticas 10, Examen 30). Ej: 100/100 -> 20/20, 50/100 -> 10/20. */
     window.recalcularNotaPonderada = function (inputCruda) {
       let val = inputCruda.value === '' ? '' : Number(inputCruda.value) || 0;
       if (val !== '') {
@@ -1019,7 +1019,7 @@
       const tr = inputCruda.closest('tr');
       const ponderadoInput = tr.querySelector(`[data-tipo="${tipoCruda}"]`);
       if (!ponderadoInput) return;
-      const ponderado = val === '' ? 0 : Math.round((val / 100) * max * 10) / 10;
+      const ponderado = val === '' ? 0 : Math.round((val / 100) * max * 100) / 100;
       ponderadoInput.value = ponderado;
       window.recalcularFila(ponderadoInput);
     };
@@ -1113,8 +1113,8 @@
 
       try {
         await Promise.all(updates);
-        await window.registrarAuditoria(`Guardó/actualizó calificaciones (T1/T2/Recuperatorio)`, `Materia: ${codigo}`);
-        btn.textContent = "¡Notas Guardadas!";
+        await window.registrarAuditoria(`GuardÃ³/actualizÃ³ calificaciones (T1/T2/Recuperatorio)`, `Materia: ${codigo}`);
+        btn.textContent = "Â¡Notas Guardadas!";
         btn.style.background = "var(--verde-700)";
         setTimeout(() => { btn.textContent = "Guardar Notas"; btn.style.background = ""; btn.disabled = false; }, 2000);
       } catch (err) {
@@ -1124,7 +1124,7 @@
       }
     };
 
-    const CABECERA_NOTAS = ['#', 'Estudiante', 'Asist. T1', 'Destr. T1', 'Invest. T1', 'Práct. T1', 'Exam. T1', 'Subtot. T1', 'Asist. T2', 'Destr. T2', 'Invest. T2', 'Práct. T2', 'Exam. T2', 'Subtot. T2', 'Semestral', 'Recuperat.', 'Nota Final', 'Estado'];
+    const CABECERA_NOTAS = ['#', 'Estudiante', 'Asist. T1', 'Destr. T1', 'Invest. T1', 'PrÃ¡ct. T1', 'Exam. T1', 'Subtot. T1', 'Asist. T2', 'Destr. T2', 'Invest. T2', 'PrÃ¡ct. T2', 'Exam. T2', 'Subtot. T2', 'Semestral', 'Recuperat.', 'Nota Final', 'Estado'];
 
     function filaNotasExport(est, idx, codigo) {
       const r = calcularNotaMateria(est, codigo, window.cfgTrimestres);
@@ -1133,7 +1133,7 @@
         idx + 1, `${est.apellidos}, ${est.nombres}`,
         r.a1.pts, r.n.t1.destreza, r.n.t1.investigacion, r.n.t1.practicas, r.n.t1.examen, fmtNum(r.t1total),
         r.a2.pts, r.n.t2.destreza, r.n.t2.investigacion, r.n.t2.practicas, r.n.t2.examen, fmtNum(r.t2total),
-        fmtNum(r.semestral), (r.n.recuperatorio === null || r.n.recuperatorio === undefined) ? '—' : r.n.recuperatorio,
+        fmtNum(r.semestral), (r.n.recuperatorio === null || r.n.recuperatorio === undefined) ? 'â€”' : r.n.recuperatorio,
         fmtNum(r.notaFinal), estado
       ];
     }
@@ -1155,7 +1155,7 @@
 
       ws.mergeCells(1, 1, 1, totalCols);
       const tituloCelda = ws.getCell(1, 1);
-      tituloCelda.value = 'INSTITUTO TECNOLÓGICO TESLAVI - SISTEMA ACADÉMICO';
+      tituloCelda.value = 'INSTITUTO TECNOLÃ“GICO TESLAVI - SISTEMA ACADÃ‰MICO';
       tituloCelda.font = { name: 'Arial', size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
       tituloCelda.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF06231A' } };
       tituloCelda.alignment = { vertical: 'middle', horizontal: 'center' };
@@ -1255,7 +1255,7 @@
       html += `<p><strong>Materia:<\/strong> ${titulo}<\/p>`;
       html += `<p><strong>Detalle:<\/strong> ${subtitulo}<\/p>`;
       html += `<p><strong>Docente:<\/strong> ${docente}<\/p>`;
-      html += `<p><strong>Fecha de impresión:<\/strong> ${fecha}<\/p>`;
+      html += `<p><strong>Fecha de impresiÃ³n:<\/strong> ${fecha}<\/p>`;
 
       html += '<table><thead><tr>' + CABECERA_NOTAS.map(h => `<th>${h}<\/th>`).join('') + '<\/tr><\/thead><tbody>';
 
@@ -1288,7 +1288,7 @@
       document.getElementById('seccion-asistencia').classList.add('activa');
       document.getElementById('topbarRuta').textContent = `Mis Materias / Asistencia / ${nombre}`;
       document.getElementById('tituloMateriaAsistencia').textContent = nombre;
-      document.getElementById('subtituloMateriaAsistencia').textContent = `Cód: ${codigo} · Semestre ${semestreId} · Turno ${turno}`;
+      document.getElementById('subtituloMateriaAsistencia').textContent = `CÃ³d: ${codigo} Â· Semestre ${semestreId} Â· Turno ${turno}`;
 
       window.materiaCalificacionActual = codigo;
 
@@ -1353,7 +1353,7 @@
         else if (faltas >= 5) colorBarra = 'var(--alerta-texto)';
 
         let textoEstado = `
-          <div style="font-size:11px; color:var(--texto-suave); margin-bottom:4px; white-space:nowrap;">Faltas ${faltas}/8 · Justif. ${justificadas}/5${atrasos > 0 ? ` · <span style="color:#1976D2; font-weight:600;">Atrasos ${atrasos}</span>` : ''}</div>
+          <div style="font-size:11px; color:var(--texto-suave); margin-bottom:4px; white-space:nowrap;">Faltas ${faltas}/8 Â· Justif. ${justificadas}/5${atrasos > 0 ? ` Â· <span style="color:#1976D2; font-weight:600;">Atrasos ${atrasos}</span>` : ''}</div>
           <div style="height:4px; width:64px; background:var(--superficie-2); border-radius:999px; overflow:hidden;">
             <div style="height:100%; width:${pctFaltas}%; background:${colorBarra}; border-radius:999px; transition:width var(--dur-base) var(--ease-estandar);"></div>
           </div>`;
@@ -1429,14 +1429,14 @@
       horaTd.textContent = horaFormat;
     };
 
-    /* Acciones rápidas de Asistencia — §6.7 del brief. */
+    /* Acciones rÃ¡pidas de Asistencia â€” Â§6.7 del brief. */
     window.marcarTodosPresentes = function () {
       document.querySelectorAll('#tablaAsistenciaBody .asi-estado').forEach(sel => {
         if (sel.disabled) return;
         sel.value = 'Presente';
         window.cambiarAsistencia(sel);
       });
-      window.toast('Se marcó "Presente" para todos los estudiantes. Revisá las excepciones antes de guardar.', 'info');
+      window.toast('Se marcÃ³ "Presente" para todos los estudiantes. RevisÃ¡ las excepciones antes de guardar.', 'info');
     };
 
     window.limpiarAsistenciaDia = function () {
@@ -1476,7 +1476,7 @@
       const fechaSelec = document.getElementById('fechaAsistencia').value;
       const codigoMat = window.materiaCalificacionActual;
 
-      if (!fechaSelec) { window.toast('Selecciona una fecha válida.', 'info'); return; }
+      if (!fechaSelec) { window.toast('Selecciona una fecha vÃ¡lida.', 'info'); return; }
 
       btn.textContent = "Guardando...";
       btn.disabled = true;
@@ -1527,8 +1527,8 @@
 
       try {
         await Promise.all(updates);
-        await window.registrarAuditoria(`Guardó asistencia masiva`, `Asistencia (Materia: ${window.materiaCalificacionActual})`);
-        btn.textContent = "¡Asistencia Guardada!";
+        await window.registrarAuditoria(`GuardÃ³ asistencia masiva`, `Asistencia (Materia: ${window.materiaCalificacionActual})`);
+        btn.textContent = "Â¡Asistencia Guardada!";
         btn.style.background = "var(--verde-700)";
 
         window.renderizarTablaAsistencia();
@@ -1564,7 +1564,7 @@
 
       ws.mergeCells('A1:E1');
       const tituloCelda = ws.getCell('A1');
-      tituloCelda.value = 'INSTITUTO TECNOLÓGICO TESLAVI - SISTEMA ACADÉMICO';
+      tituloCelda.value = 'INSTITUTO TECNOLÃ“GICO TESLAVI - SISTEMA ACADÃ‰MICO';
       tituloCelda.font = { name: 'Arial', size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
       tituloCelda.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF06231A' } };
       tituloCelda.alignment = { vertical: 'middle', horizontal: 'center' };
@@ -1578,7 +1578,7 @@
 
       ws.mergeCells('A2:E2');
       const subCelda = ws.getCell('A2');
-      subCelda.value = `ASISTENCIA DEL DÍA: ${fechaSelec} - Fecha Impresión: ${fechaHoy}`;
+      subCelda.value = `ASISTENCIA DEL DÃA: ${fechaSelec} - Fecha ImpresiÃ³n: ${fechaHoy}`;
       subCelda.font = { name: 'Arial', size: 11, bold: true };
       subCelda.alignment = { horizontal: 'center' };
 
@@ -1644,14 +1644,14 @@
 
       doc.setTextColor(11, 59, 42);
       doc.setFontSize(12);
-      doc.text(`ASISTENCIA DEL DÍA: ${fechaSelec}`, 105, 30, { align: "center" });
+      doc.text(`ASISTENCIA DEL DÃA: ${fechaSelec}`, 105, 30, { align: "center" });
 
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
       doc.text(`Materia: ${titulo}`, 14, 40);
       doc.text(subtitulo, 14, 45);
       doc.text(`Docente: ${docente}`, 14, 50);
-      doc.text(`Fecha impresión: ${fechaHoy}`, 150, 40);
+      doc.text(`Fecha impresiÃ³n: ${fechaHoy}`, 150, 40);
 
       const tableData = window.estudiantesAsistenciaCache.map((est, idx) => {
         let asistObj = {};
@@ -1695,11 +1695,11 @@
       html += '<\/head><body>';
       html += logoAsistWordHtml;
       html += '<h2>INSTITUTO TECNOLOGICO TESLAVI<\/h2>';
-      html += `<h3>ASISTENCIA DEL DÍA: ${fechaSelec}<\/h3>`;
+      html += `<h3>ASISTENCIA DEL DÃA: ${fechaSelec}<\/h3>`;
       html += `<p><strong>Materia:<\/strong> ${titulo}<\/p>`;
       html += `<p><strong>Detalle:<\/strong> ${subtitulo}<\/p>`;
       html += `<p><strong>Docente:<\/strong> ${docente}<\/p>`;
-      html += `<p><strong>Fecha de impresión:<\/strong> ${fechaHoy}<\/p>`;
+      html += `<p><strong>Fecha de impresiÃ³n:<\/strong> ${fechaHoy}<\/p>`;
 
       html += '<table><thead><tr><th>#<\/th><th>Estudiante<\/th><th>Estado<\/th><th>Motivo<\/th><th>Hora<\/th><\/tr><\/thead><tbody>';
 
@@ -1735,7 +1735,7 @@
       document.getElementById('seccion-historial-asistencia').classList.add('activa');
       document.getElementById('topbarRuta').textContent = `Mis Materias / Historial / ${nombre}`;
       document.getElementById('tituloMateriaHistorial').textContent = 'Historial: ' + nombre;
-      document.getElementById('subtituloMateriaHistorial').textContent = `Cód: ${codigo} · Semestre ${semestreId} · Turno ${turno}`;
+      document.getElementById('subtituloMateriaHistorial').textContent = `CÃ³d: ${codigo} Â· Semestre ${semestreId} Â· Turno ${turno}`;
 
       window.materiaCalificacionActual = codigo;
 
@@ -1772,7 +1772,7 @@
 
       if (fechasArray.length === 0) {
         thead.innerHTML = '<tr><th>#</th><th>Estudiante</th><th>Info</th></tr>';
-        tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: var(--texto-suave); padding: 32px 0;">No has tomado asistencia en ninguna fecha todavía.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: var(--texto-suave); padding: 32px 0;">No has tomado asistencia en ninguna fecha todavÃ­a.</td></tr>';
         return;
       }
 
@@ -1912,9 +1912,9 @@
 
       document.getElementById('modalCorregirDia').style.display = 'none';
       btn.textContent = "Mover y Editar"; btn.disabled = false;
-      window.toast('Día preparado. Edita la lista y guárdala de nuevo.', 'exito');
+      window.toast('DÃ­a preparado. Edita la lista y guÃ¡rdala de nuevo.', 'exito');
 
-      // Ir a la pestaña Llamar Lista
+      // Ir a la pestaÃ±a Llamar Lista
       document.getElementById('fechaAsistencia').value = fechaNueva;
       const tabLlamar = document.querySelector('.tabs-container button[onclick*="vista-registro-asistencia"]');
       if(tabLlamar) tabLlamar.click();
@@ -1931,7 +1931,7 @@
         fechaOrgDB = partes[2] + '-' + partes[1] + '-' + partes[0];
       }
 
-      if(!confirm(`¿Seguro que deseas eliminar TODA la asistencia del día ${fechaOrgRaw}?`)) return;
+      if(!confirm(`Â¿Seguro que deseas eliminar TODA la asistencia del dÃ­a ${fechaOrgRaw}?`)) return;
 
       const btn = document.querySelector('#modalCorregirDia .btn-secundario').nextElementSibling;
       btn.textContent = "Eliminando..."; btn.disabled = true;
@@ -1958,19 +1958,19 @@
 
       if(encontrados === 0) {
         window.toast('No se encontraron registros con esa fecha', 'error');
-        btn.textContent = "Eliminar Día"; btn.disabled = false;
+        btn.textContent = "Eliminar DÃ­a"; btn.disabled = false;
         return;
       }
 
       try {
         await Promise.all(updates);
-        window.toast('Día eliminado correctamente', 'exito');
+        window.toast('DÃ­a eliminado correctamente', 'exito');
         document.getElementById('modalCorregirDia').style.display = 'none';
         window.renderizarTablaHistorialAsistencia(); // Recargar la tabla actual
       } catch(err) {
         window.toast('Error al eliminar: ' + err.message, 'error');
       }
-      btn.textContent = "Eliminar Día"; btn.disabled = false;
+      btn.textContent = "Eliminar DÃ­a"; btn.disabled = false;
     };
 
     window.exportarExcelHistorial = async function () {
@@ -2005,7 +2005,7 @@
       ws.columns = cols;
 
       ws.mergeCells(1, 1, 1, cols.length);
-      ws.getCell('A1').value = 'INSTITUTO TECNOLÓGICO TESLAVI';
+      ws.getCell('A1').value = 'INSTITUTO TECNOLÃ“GICO TESLAVI';
       ws.getCell('A1').font = { bold: true, color: { argb: 'FFFFFFFF' } };
       ws.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF06231A' } };
       ws.getCell('A1').alignment = { horizontal: 'center' };
@@ -2099,7 +2099,7 @@
 
       doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
-      doc.text("INSTITUTO TECNOLÓGICO TESLAVI", doc.internal.pageSize.getWidth() / 2, 40, { align: "center" });
+      doc.text("INSTITUTO TECNOLÃ“GICO TESLAVI", doc.internal.pageSize.getWidth() / 2, 40, { align: "center" });
 
       doc.setFontSize(12);
       doc.text(`HISTORIAL DE ASISTENCIA - ${fechaHoy}`, doc.internal.pageSize.getWidth() / 2, 60, { align: "center" });
@@ -2163,3 +2163,4 @@
 </body>
 
 </html>
+
