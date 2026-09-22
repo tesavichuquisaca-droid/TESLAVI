@@ -7682,8 +7682,11 @@
       });
       const gruposOrdenados = [...grupos.entries()].sort(([a], [b]) => a.localeCompare(b));
 
-      const COLS = 15;
-      let filasTodas = '';
+
+
+
+      // ── Construir HTML: una tarjeta/tabla separada por cada grupo ──
+      let tablasPorGrupo = '';
       let numGlobal = 0;
 
       gruposOrdenados.forEach(([clave, gpagos]) => {
@@ -7693,8 +7696,7 @@
         gpagos.sort((a, b) => new Date(a.fecha_pago) - new Date(b.fecha_pago));
 
         let gEf = 0, gTr = 0, gQR = 0, gTotal = 0;
-
-        filasTodas += `<tr style="background:#d4edda;"><td colspan="${COLS}" style="font-weight:700;color:#06231a;padding:8px 12px;font-size:13px;">📚 ${semLabel} &nbsp;·&nbsp; Turno: ${turnoLabel}</td></tr>`;
+        let filas = '';
 
         gpagos.forEach(p => {
           numGlobal++;
@@ -7711,7 +7713,7 @@
           const comprobante = p.numero_comprobante_externo || '-';
           const pagadoPor = p.pagador_tipo === 'otro' ? (p.pagador_nombre || 'Otro') : 'Propio';
 
-          filasTodas += `<tr>
+          filas += `<tr>
             <td style="text-align:center;">${numGlobal}</td>
             <td style="text-align:center;">${comprobante}</td>
             <td>${est.apellidos || ''} ${est.nombres || ''}</td>
@@ -7730,14 +7732,54 @@
           </tr>`;
         });
 
-        filasTodas += `<tr style="background:#f0faf3;border-top:2px solid #a8d5b5;">
-          <td colspan="11" style="text-align:right;font-weight:700;font-size:12px;padding:6px 8px;color:var(--verde-800);">Subtotal ${semLabel} / Turno ${turnoLabel} (${gpagos.length} pago${gpagos.length !== 1 ? 's' : ''}):</td>
-          <td style="text-align:right;font-weight:700;padding:6px 8px;">${gEf ? bs(gEf) : '-'}</td>
-          <td style="text-align:right;font-weight:700;padding:6px 8px;">${gTr ? bs(gTr) : '-'}</td>
-          <td style="text-align:right;font-weight:700;padding:6px 8px;">${gQR ? bs(gQR) : '-'}</td>
-          <td style="text-align:right;font-weight:700;padding:6px 8px;color:var(--verde-800);">${bs(gTotal)}</td>
-        </tr>`;
+        tablasPorGrupo += `
+          <div class="form-card" style="max-width:1000px;margin-top:16px;overflow-x:auto;">
+            <div class="form-section-header" style="background:var(--verde-100,#d4edda);border-left:4px solid var(--verde-700,#1B8557);">
+              <h3 style="margin:0;color:var(--verde-900,#06231a);">${semLabel} — Turno: ${turnoLabel}</h3>
+              <p style="margin:4px 0 0;font-size:13px;color:var(--verde-700);">${gpagos.length} pago${gpagos.length !== 1 ? 's' : ''} · Total: <strong>${bs(gTotal)}</strong></p>
+            </div>
+            <div class="form-section-body" style="padding:0;overflow-x:auto;">
+              <table class="materia-table" style="width:100%;min-width:1100px;">
+                <thead>
+                  <tr>
+                    <th>#</th><th>Nro. Comp.</th><th>Estudiante</th><th>CI</th>
+                    <th style="text-align:center;">Sem.</th><th style="text-align:center;">Cuota</th>
+                    <th style="text-align:center;">Estado</th><th>Cajera</th><th>Método</th>
+                    <th>Fecha y Hora</th><th>Pagado Por</th>
+                    <th style="text-align:right;">Efectivo (Bs)</th>
+                    <th style="text-align:right;">Transferencia (Bs)</th>
+                    <th style="text-align:right;">QR (Bs)</th>
+                    <th style="text-align:right;">Monto Total</th>
+                  </tr>
+                </thead>
+                <tbody>${filas}</tbody>
+                <tfoot>
+                  <tr style="background:#f0faf3;">
+                    <td colspan="11" style="text-align:right;font-weight:700;padding:8px;">Subtotal ${semLabel} / Turno ${turnoLabel}:</td>
+                    <td style="text-align:right;font-weight:700;padding:8px;">${gEf ? bs(gEf) : '-'}</td>
+                    <td style="text-align:right;font-weight:700;padding:8px;">${gTr ? bs(gTr) : '-'}</td>
+                    <td style="text-align:right;font-weight:700;padding:8px;">${gQR ? bs(gQR) : '-'}</td>
+                    <td style="text-align:right;font-weight:700;padding:8px;color:var(--verde-800);">${bs(gTotal)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>`;
       });
+
+      // Tarjeta de total general al final
+      tablasPorGrupo += `
+        <div class="form-card" style="max-width:1000px;margin-top:16px;background:var(--verde-900,#06231a);color:white;">
+          <div class="form-section-body" style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+            <span style="font-size:16px;font-weight:700;">TOTAL GENERAL (${pagos.length} pagos)</span>
+            <span style="display:flex;gap:24px;flex-wrap:wrap;">
+              <span>Efectivo: <strong>${bs(totalEfectivo)}</strong></span>
+              <span>Transf.: <strong>${bs(totalTransferencia)}</strong></span>
+              <span>QR: <strong>${bs(totalQR)}</strong></span>
+              <span style="font-size:18px;color:#7dffb3;">Total: <strong>${bs(totalGeneral)}</strong></span>
+            </span>
+          </div>
+        </div>`;
 
       cont.innerHTML = `
         <div class="form-card" style="max-width:1000px;">
@@ -7753,35 +7795,7 @@
             </div>
           </div>
         </div>
-        <div class="form-card" style="max-width:1000px;margin-top:16px;overflow-x:auto;">
-          <div class="form-section-header"><h3>Detalle de pagos — agrupado por Semestre y Turno</h3></div>
-          <div class="form-section-body" style="padding:0;overflow-x:auto;">
-            <table class="materia-table" style="width:100%;min-width:1100px;">
-              <thead>
-                <tr>
-                  <th>#</th><th>Nro. Comp.</th><th>Estudiante</th><th>CI</th>
-                  <th style="text-align:center;">Semestre</th><th style="text-align:center;">Cuota</th>
-                  <th style="text-align:center;">Estado</th><th>Cajera</th><th>Método</th>
-                  <th>Fecha y Hora</th><th>Pagado Por</th>
-                  <th style="text-align:right;">Efectivo (Bs)</th>
-                  <th style="text-align:right;">Transferencia (Bs)</th>
-                  <th style="text-align:right;">QR (Bs)</th>
-                  <th style="text-align:right;">Monto Total</th>
-                </tr>
-              </thead>
-              <tbody>${filasTodas || `<tr><td colspan="${COLS}" style="text-align:center;">Sin pagos en este rango</td></tr>`}</tbody>
-              <tfoot>
-                <tr>
-                  <td colspan="11" style="text-align:right;font-weight:700;padding:8px;">TOTAL GENERAL:</td>
-                  <td style="text-align:right;font-weight:700;padding:8px;">${bs(totalEfectivo)}</td>
-                  <td style="text-align:right;font-weight:700;padding:8px;">${bs(totalTransferencia)}</td>
-                  <td style="text-align:right;font-weight:700;padding:8px;">${bs(totalQR)}</td>
-                  <td style="text-align:right;font-weight:700;padding:8px;color:var(--verde-800);">${bs(totalGeneral)}</td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        </div>`;
+        ${tablasPorGrupo}`;
     };
 
     window.cargarReporteMorosidad = async function () {
@@ -7907,58 +7921,75 @@
         tableWidth: 100
       });
 
-      // Tabla detalle de pagos
-      nextY = doc.lastAutoTable.finalY + 8;
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5);
-      doc.text('Detalle de pagos recibidos', 14, nextY);
-      doc.autoTable({
-        startY: nextY + 3,
-        head: [['#', 'Comp.', 'Estudiante', 'CI', 'Sem.', 'Cuota', 'Estado', 'Cajera', 'Método', 'Fecha', 'Pagador', 'Efec.', 'Trans.', 'QR', 'Total']],
-        body: c.pagos.map((p, i) => {
+      // Tablas de detalle agrupadas por Semestre y Turno
+      const gPDF = new Map();
+      c.pagos.forEach(p => {
+        const est = p.estudiantes || {};
+        const semNum = est.semestre ?? 99;
+        const semLabel = est.semestre != null ? `Semestre ${est.semestre}` : 'Sin Semestre';
+        const turno = est.turno || 'Sin Turno';
+        const clave = `${String(semNum).padStart(2,'0')}|${semLabel}|${turno}`;
+        if (!gPDF.has(clave)) gPDF.set(clave, []);
+        gPDF.get(clave).push(p);
+      });
+      const gPDFOrdenados = [...gPDF.entries()].sort(([a], [b]) => a.localeCompare(b));
+
+      let numPDF = 0;
+      gPDFOrdenados.forEach(([clave, gpagos]) => {
+        const partes = clave.split('|');
+        const semLabel = partes[1];
+        const turnoLabel = partes[2];
+        gpagos.sort((a, b) => new Date(a.fecha_pago) - new Date(b.fecha_pago));
+
+        let gEfT = 0, gTrT = 0, gQRT = 0, gTotalT = 0;
+
+        nextY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 10 : 43;
+        if (nextY > 175) { doc.addPage('a4', 'landscape'); nextY = 15; }
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5);
+        doc.setTextColor(6, 35, 26);
+        doc.text(`${semLabel}  /  Turno: ${turnoLabel}`, 14, nextY);
+        doc.setTextColor(0, 0, 0);
+
+        const bodyGrupo = gpagos.map(p => {
+          numPDF++;
           const cajera = c.userMap.get(p.registrado_por) || 'Desc.';
           const est = p.estudiantes || {};
           const fecha = new Date(p.fecha_pago).toLocaleDateString('es-BO');
-          const semestre = est.semestre || '-';
           const cuota = p.cuotas?.numero_cuota ? `C${p.cuotas.numero_cuota}` : '-';
           const estado = est.estado_financiero || 'PAGADO';
           const met = (p.metodo_pago || '').toLowerCase().trim();
-          const montoEf = met === 'efectivo' ? bs(p.monto) : '-';
-          const montoTr = met === 'transferencia' ? bs(p.monto) : '-';
-          const montoQr = met === 'qr' ? bs(p.monto) : '-';
-          const comprobante = p.numero_comprobante_externo || '-';
+          const mEf = met === 'efectivo' ? bs(p.monto) : '-';
+          const mTr = met === 'transferencia' ? bs(p.monto) : '-';
+          const mQr = met === 'qr' ? bs(p.monto) : '-';
+          if (met === 'efectivo') gEfT += Number(p.monto);
+          if (met === 'transferencia') gTrT += Number(p.monto);
+          if (met === 'qr') gQRT += Number(p.monto);
+          gTotalT += Number(p.monto);
+          const comp = p.numero_comprobante_externo || '-';
           const pagadoPor = p.pagador_tipo === 'otro' ? (p.pagador_nombre || 'Otro') : 'Propio';
+          return [numPDF, comp, `${est.apellidos || ''} ${est.nombres || ''}`.trim(), est.ci || '', est.semestre ?? '-', cuota, estado, cajera, p.metodo_pago, fecha, pagadoPor, mEf, mTr, mQr, bs(p.monto)];
+        });
 
-          return [
-            i + 1,
-            comprobante,
-            `${est.apellidos || ''} ${est.nombres || ''}`.trim(),
-            est.ci || '',
-            semestre,
-            cuota,
-            estado,
-            cajera,
-            p.metodo_pago,
-            fecha,
-            pagadoPor,
-            montoEf,
-            montoTr,
-            montoQr,
-            bs(p.monto)
-          ];
-        }),
-        foot: [['', '', '', '', '', '', '', '', '', '', 'TOTALES', bs(c.totalEfectivo || 0), bs(c.totalTransferencia || 0), bs(c.totalQR || 0), bs(c.totalGeneral)]],
-        headStyles: { fillColor: [20, 108, 70], textColor: [255, 255, 255], fontSize: 7.5 },
-        footStyles: { fillColor: [240, 245, 242], fontStyle: 'bold', fontSize: 7.5 },
-        styles: { fontSize: 7.5, cellPadding: 2 },
-        columnStyles: {
-          0: { cellWidth: 8 },
-          11: { halign: 'right' },
-          12: { halign: 'right' },
-          13: { halign: 'right' },
-          14: { halign: 'right', fontStyle: 'bold' }
-        },
-        alternateRowStyles: { fillColor: [240, 245, 242] }
+        doc.autoTable({
+          startY: nextY + 3,
+          head: [['#', 'Comp.', 'Estudiante', 'CI', 'Sem.', 'Cuota', 'Estado', 'Cajera', 'Metodo', 'Fecha', 'Pagador', 'Efec.', 'Trans.', 'QR', 'Total']],
+          body: bodyGrupo,
+          foot: [['', '', '', '', '', '', '', '', '', '', `Subtotal (${gpagos.length})`, gEfT ? bs(gEfT) : '-', gTrT ? bs(gTrT) : '-', gQRT ? bs(gQRT) : '-', bs(gTotalT)]],
+          headStyles: { fillColor: [20, 108, 70], textColor: [255, 255, 255], fontSize: 7 },
+          footStyles: { fillColor: [208, 235, 218], fontStyle: 'bold', fontSize: 7 },
+          styles: { fontSize: 7, cellPadding: 1.5 },
+          columnStyles: { 0: { cellWidth: 7 }, 11: { halign: 'right' }, 12: { halign: 'right' }, 13: { halign: 'right' }, 14: { halign: 'right', fontStyle: 'bold' } },
+          alternateRowStyles: { fillColor: [240, 245, 242] }
+        });
       });
+
+      // Fila de total general al final del PDF
+      nextY = doc.lastAutoTable.finalY + 6;
+      if (nextY > 185) { doc.addPage('a4', 'landscape'); nextY = 15; }
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5);
+      doc.setTextColor(6, 35, 26);
+      doc.text(`TOTAL GENERAL: ${bs(c.totalGeneral)}   (Efectivo: ${bs(c.totalEfectivo||0)}  Transf.: ${bs(c.totalTransferencia||0)}  QR: ${bs(c.totalQR||0)})`, 14, nextY);
+      doc.setTextColor(0, 0, 0);
 
       // Morosidad
       if (window.moroCache && window.moroCache.length > 0) {
@@ -7988,76 +8019,101 @@
       const wb = new ExcelJS.Workbook();
       const fechaHoy = new Date().toLocaleDateString('es-ES');
 
-      // Hoja 1: Detalle de pagos
+      // Hoja 1: Detalle de pagos agrupado por Semestre y Turno
       const ws1 = wb.addWorksheet('Pagos Recibidos');
-      ws1.mergeCells('A1:M1');
-      ws1.getCell('A1').value = `INSTITUTO TECNOLÓGICO TESLAVI — REPORTE FINANCIERO ${c.desde} al ${c.hasta} — Generado: ${fechaHoy}`;
-      ws1.getCell('A1').font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 12 };
-      ws1.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF06231A' } };
-      ws1.getCell('A1').alignment = { horizontal: 'center' };
-
+      const NCOLS = 15;
       ws1.columns = [
-        { key: 'num', width: 6 },
-        { key: 'comp', width: 12 },
-        { key: 'estudiante', width: 35 },
-        { key: 'ci', width: 13 },
-        { key: 'semestre', width: 14 },
-        { key: 'cuota', width: 12 },
-        { key: 'estado', width: 14 },
-        { key: 'cajera', width: 20 },
-        { key: 'metodo', width: 14 },
-        { key: 'fecha', width: 18 },
-        { key: 'pagador', width: 25 },
-        { key: 'efectivo', width: 15 },
-        { key: 'transferencia', width: 18 },
-        { key: 'qr', width: 15 },
-        { key: 'monto_total', width: 16 }
+        { key: 'num', width: 6 }, { key: 'comp', width: 12 }, { key: 'estudiante', width: 35 },
+        { key: 'ci', width: 13 }, { key: 'semestre', width: 10 }, { key: 'cuota', width: 10 },
+        { key: 'estado', width: 12 }, { key: 'cajera', width: 20 }, { key: 'metodo', width: 12 },
+        { key: 'fecha', width: 18 }, { key: 'pagador', width: 22 },
+        { key: 'efectivo', width: 14 }, { key: 'transferencia', width: 16 },
+        { key: 'qr', width: 12 }, { key: 'monto_total', width: 15 }
       ];
 
-      const hdr1 = ws1.getRow(2);
-      hdr1.values = ['#', 'Nro. Comp.', 'Estudiante', 'CI', 'Semestre', 'Cuota', 'Estado', 'Cajera', 'Método', 'Fecha y Hora', 'Pagado Por', 'Efectivo (Bs)', 'Transferencia (Bs)', 'QR (Bs)', 'Monto Total (Bs)'];
-      hdr1.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-      hdr1.eachCell(cell => cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF146C46' } });
+      // Fila 1: título general
+      ws1.mergeCells(1, 1, 1, NCOLS);
+      const titCell = ws1.getCell(1, 1);
+      titCell.value = `INSTITUTO TECNOLOGICO TESLAVI — REPORTE FINANCIERO ${c.desde} al ${c.hasta} — Generado: ${fechaHoy}`;
+      titCell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 12 };
+      titCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF06231A' } };
+      titCell.alignment = { horizontal: 'center' };
 
-      c.pagos.forEach((p, i) => {
-        const cajera = c.userMap.get(p.registrado_por) || 'Desconocido';
+      // Cabecera de columnas (fija, fila 2)
+      const hdrCols = ['#', 'Nro. Comp.', 'Estudiante', 'CI', 'Semestre', 'Cuota', 'Estado', 'Cajera', 'Metodo', 'Fecha y Hora', 'Pagado Por', 'Efectivo (Bs)', 'Transferencia (Bs)', 'QR (Bs)', 'Monto Total (Bs)'];
+      const hdrRow = ws1.getRow(2);
+      hdrRow.values = hdrCols;
+      hdrRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      hdrRow.eachCell(cell => { cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF146C46' } }; });
+
+      // Agrupar igual que el HTML
+      const gXls = new Map();
+      c.pagos.forEach(p => {
         const est = p.estudiantes || {};
-        const fecha = new Date(p.fecha_pago).toLocaleString('es-BO');
-        const semestre = est.semestre || '-';
-        const cuota = p.cuotas?.numero_cuota ? `Cuota ${p.cuotas.numero_cuota}` : '-';
-        const estado = est.estado_financiero || 'PAGADO';
-        const met = (p.metodo_pago || '').toLowerCase().trim();
-        const ef = met === 'efectivo' ? Number(p.monto) : 0;
-        const tr = met === 'transferencia' ? Number(p.monto) : 0;
-        const qr = met === 'qr' ? Number(p.monto) : 0;
-        const total = Number(p.monto);
-        const comprobante = p.numero_comprobante_externo || '-';
-        const pagadoPor = p.pagador_tipo === 'otro' ? (p.pagador_nombre || 'Otro') : 'Propio';
+        const semNum = est.semestre ?? 99;
+        const semLabel = est.semestre != null ? `Semestre ${est.semestre}` : 'Sin Semestre';
+        const turno = est.turno || 'Sin Turno';
+        const clave = `${String(semNum).padStart(2,'0')}|${semLabel}|${turno}`;
+        if (!gXls.has(clave)) gXls.set(clave, []);
+        gXls.get(clave).push(p);
+      });
+      const gXlsOrdenados = [...gXls.entries()].sort(([a], [b]) => a.localeCompare(b));
 
-        ws1.addRow([
-          i + 1,
-          comprobante,
-          `${est.apellidos || ''} ${est.nombres || ''}`.trim(),
-          est.ci || '',
-          semestre,
-          cuota,
-          estado,
-          cajera,
-          p.metodo_pago,
-          fecha,
-          pagadoPor,
-          ef,
-          tr,
-          qr,
-          total
-        ]);
+      let numXls = 0;
+      gXlsOrdenados.forEach(([clave, gpagos]) => {
+        const partes = clave.split('|');
+        const semLabel = partes[1];
+        const turnoLabel = partes[2];
+        gpagos.sort((a, b) => new Date(a.fecha_pago) - new Date(b.fecha_pago));
+
+        // Fila encabezado de grupo
+        const gHdrRow = ws1.addRow([`${semLabel}  /  Turno: ${turnoLabel}`]);
+        ws1.mergeCells(gHdrRow.number, 1, gHdrRow.number, NCOLS);
+        gHdrRow.getCell(1).font = { bold: true, color: { argb: 'FF06231A' }, size: 10 };
+        gHdrRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD4EDDA' } };
+        gHdrRow.height = 18;
+
+        let gEf = 0, gTr = 0, gQr = 0, gTotal = 0;
+
+        gpagos.forEach(p => {
+          numXls++;
+          const cajera = c.userMap.get(p.registrado_por) || 'Desconocido';
+          const est = p.estudiantes || {};
+          const fecha = new Date(p.fecha_pago).toLocaleString('es-BO');
+          const cuota = p.cuotas?.numero_cuota ? `Cuota ${p.cuotas.numero_cuota}` : '-';
+          const estado = est.estado_financiero || 'PAGADO';
+          const met = (p.metodo_pago || '').toLowerCase().trim();
+          const ef = met === 'efectivo' ? Number(p.monto) : 0;
+          const tr = met === 'transferencia' ? Number(p.monto) : 0;
+          const qr = met === 'qr' ? Number(p.monto) : 0;
+          gEf += ef; gTr += tr; gQr += qr; gTotal += Number(p.monto);
+          const comp = p.numero_comprobante_externo || '-';
+          const pagadoPor = p.pagador_tipo === 'otro' ? (p.pagador_nombre || 'Otro') : 'Propio';
+
+          ws1.addRow([
+            numXls, comp,
+            `${est.apellidos || ''} ${est.nombres || ''}`.trim(),
+            est.ci || '', est.semestre ?? '-', cuota, estado,
+            cajera, p.metodo_pago, fecha, pagadoPor,
+            ef, tr, qr, Number(p.monto)
+          ]);
+        });
+
+        // Fila subtotal del grupo
+        const subRow = ws1.addRow(['', '', '', '', '', '', '', '', '', '', `Subtotal ${semLabel} / Turno ${turnoLabel}`, gEf || 0, gTr || 0, gQr || 0, gTotal]);
+        subRow.font = { bold: true };
+        [12, 13, 14, 15].forEach(ci => {
+          subRow.getCell(ci).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD0EBD9' } };
+        });
+        // Fila vacía entre grupos
+        ws1.addRow([]);
       });
 
-      const totalRow = ws1.addRow(['', '', '', '', '', '', '', '', '', '', 'TOTALES', c.totalEfectivo || 0, c.totalTransferencia || 0, c.totalQR || 0, c.totalGeneral]);
-      totalRow.font = { bold: true };
-      [12, 13, 14, 15].forEach(colIndex => {
-        totalRow.getCell(colIndex).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCE5D6' } };
-      });
+      // Fila total general
+      const totalRow = ws1.addRow(['', '', '', '', '', '', '', '', '', '', 'TOTAL GENERAL', c.totalEfectivo || 0, c.totalTransferencia || 0, c.totalQR || 0, c.totalGeneral]);
+      totalRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      totalRow.eachCell(cell => { cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF06231A' } }; });
+      totalRow.height = 18;
 
       // Hoja 2: Resumen
       const ws2 = wb.addWorksheet('Resumen');
