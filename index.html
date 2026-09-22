@@ -3424,6 +3424,7 @@
               <div>
                 <h1 class="header-title" id="tituloAdminNotas">Materia</h1>
                 <p class="header-desc" id="subtituloAdminNotas">Semestre - Turno</p>
+                <p class="header-desc" id="docenteAdminNotas" style="margin-top:2px; color:var(--verde-700); font-weight:500;"></p>
               </div>
               <div style="display: flex; gap: 8px;">
                 <button onclick="window.exportarExcelNotasAdmin()" class="btn-ingresar"
@@ -7631,7 +7632,7 @@
       // Traer pagos con detalle de estudiante y cuota
       const { data: pagos, error } = await supabaseClient
         .from('pagos')
-        .select('id, monto, metodo_pago, fecha_pago, registrado_por, numero_comprobante_externo, anulado, estudiante_id, cuotas(numero_cuota, planes_pago(tipo_plan)), estudiantes(nombres, apellidos, ci, semestre, estado_financiero)')
+        .select('id, monto, metodo_pago, fecha_pago, registrado_por, numero_comprobante_externo, anulado, estudiante_id, pagador_tipo, pagador_nombre, cuotas(numero_cuota, planes_pago(tipo_plan)), estudiantes(nombres, apellidos, ci, semestre, turno, estado_financiero)')
         .gte('fecha_pago', desde)
         .lte('fecha_pago', hasta + 'T23:59:59')
         .eq('anulado', false)
@@ -7668,34 +7669,75 @@
       // Guardar en cache para exportar
       window.reporteFinancieroCache = { pagos, porMetodo, porUsuario, totalGeneral, totalEfectivo, totalTransferencia, totalQR, desde, hasta, userMap };
 
-      const filasPagos = pagos.map((p, i) => {
-        const cajera = userMap.get(p.registrado_por) || 'Desconocido';
+      // ── Agrupar por Semestre → Turno, filas ordenadas por fecha ──
+      const grupos = new Map();
+      pagos.forEach(p => {
         const est = p.estudiantes || {};
-        const semestre = est.semestre || '-';
-        const cuotaTexto = p.cuotas?.numero_cuota ? `Cuota ${p.cuotas.numero_cuota}` : '-';
-        const estadoTexto = est.estado_financiero || 'PAGADO';
-        const fecha = new Date(p.fecha_pago).toLocaleDateString('es-BO') + ' ' + new Date(p.fecha_pago).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' });
-        const met = (p.metodo_pago || '').toLowerCase().trim();
-        const mEfectivo = met === 'efectivo' ? Number(p.monto) : 0;
-        const mTransferencia = met === 'transferencia' ? Number(p.monto) : 0;
-        const mQR = met === 'qr' ? Number(p.monto) : 0;
+        const semNum = est.semestre ?? 99;
+        const semLabel = est.semestre != null ? `Semestre ${est.semestre}` : 'Sin Semestre';
+        const turno = est.turno || 'Sin Turno';
+        const clave = `${String(semNum).padStart(2,'0')}|${semLabel}|${turno}`;
+        if (!grupos.has(clave)) grupos.set(clave, []);
+        grupos.get(clave).push(p);
+      });
+      const gruposOrdenados = [...grupos.entries()].sort(([a], [b]) => a.localeCompare(b));
 
-        return `<tr>
-          <td style="text-align:center;">${i + 1}</td>
-          <td>${est.apellidos || ''} ${est.nombres || ''}</td>
-          <td>${est.ci || ''}</td>
-          <td style="text-align:center;">${semestre}</td>
-          <td style="text-align:center;">${cuotaTexto}</td>
-          <td style="text-align:center;">${badgeHtml(ESTADO_FINANCIERO_BADGE, estadoTexto)}</td>
-          <td>${cajera}</td>
-          <td style="text-transform:capitalize;">${p.metodo_pago}</td>
-          <td>${fecha}</td>
-          <td style="text-align:right;">${mEfectivo ? bs(mEfectivo) : '-'}</td>
-          <td style="text-align:right;">${mTransferencia ? bs(mTransferencia) : '-'}</td>
-          <td style="text-align:right;">${mQR ? bs(mQR) : '-'}</td>
-          <td style="text-align:right; font-weight:600; color:var(--verde-800);">${bs(p.monto)}</td>
+      const COLS = 15;
+      let filasTodas = '';
+      let numGlobal = 0;
+
+      gruposOrdenados.forEach(([clave, gpagos]) => {
+        const partes = clave.split('|');
+        const semLabel = partes[1];
+        const turnoLabel = partes[2];
+        gpagos.sort((a, b) => new Date(a.fecha_pago) - new Date(b.fecha_pago));
+
+        let gEf = 0, gTr = 0, gQR = 0, gTotal = 0;
+
+        filasTodas += `<tr style="background:#d4edda;"><td colspan="${COLS}" style="font-weight:700;color:#06231a;padding:8px 12px;font-size:13px;">📚 ${semLabel} &nbsp;·&nbsp; Turno: ${turnoLabel}</td></tr>`;
+
+        gpagos.forEach(p => {
+          numGlobal++;
+          const cajera = userMap.get(p.registrado_por) || 'Desconocido';
+          const est = p.estudiantes || {};
+          const cuotaTexto = p.cuotas?.numero_cuota ? `Cuota ${p.cuotas.numero_cuota}` : '-';
+          const estadoTexto = est.estado_financiero || 'PAGADO';
+          const fecha = new Date(p.fecha_pago).toLocaleDateString('es-BO') + ' ' + new Date(p.fecha_pago).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' });
+          const met = (p.metodo_pago || '').toLowerCase().trim();
+          const mEf = met === 'efectivo' ? Number(p.monto) : 0;
+          const mTr = met === 'transferencia' ? Number(p.monto) : 0;
+          const mQr = met === 'qr' ? Number(p.monto) : 0;
+          gEf += mEf; gTr += mTr; gQR += mQr; gTotal += Number(p.monto);
+          const comprobante = p.numero_comprobante_externo || '-';
+          const pagadoPor = p.pagador_tipo === 'otro' ? (p.pagador_nombre || 'Otro') : 'Propio';
+
+          filasTodas += `<tr>
+            <td style="text-align:center;">${numGlobal}</td>
+            <td style="text-align:center;">${comprobante}</td>
+            <td>${est.apellidos || ''} ${est.nombres || ''}</td>
+            <td>${est.ci || ''}</td>
+            <td style="text-align:center;">${est.semestre ?? '-'}</td>
+            <td style="text-align:center;">${cuotaTexto}</td>
+            <td style="text-align:center;">${badgeHtml(ESTADO_FINANCIERO_BADGE, estadoTexto)}</td>
+            <td>${cajera}</td>
+            <td style="text-transform:capitalize;">${p.metodo_pago}</td>
+            <td>${fecha}</td>
+            <td>${pagadoPor}</td>
+            <td style="text-align:right;">${mEf ? bs(mEf) : '-'}</td>
+            <td style="text-align:right;">${mTr ? bs(mTr) : '-'}</td>
+            <td style="text-align:right;">${mQr ? bs(mQr) : '-'}</td>
+            <td style="text-align:right;font-weight:600;color:var(--verde-800);">${bs(p.monto)}</td>
+          </tr>`;
+        });
+
+        filasTodas += `<tr style="background:#f0faf3;border-top:2px solid #a8d5b5;">
+          <td colspan="11" style="text-align:right;font-weight:700;font-size:12px;padding:6px 8px;color:var(--verde-800);">Subtotal ${semLabel} / Turno ${turnoLabel} (${gpagos.length} pago${gpagos.length !== 1 ? 's' : ''}):</td>
+          <td style="text-align:right;font-weight:700;padding:6px 8px;">${gEf ? bs(gEf) : '-'}</td>
+          <td style="text-align:right;font-weight:700;padding:6px 8px;">${gTr ? bs(gTr) : '-'}</td>
+          <td style="text-align:right;font-weight:700;padding:6px 8px;">${gQR ? bs(gQR) : '-'}</td>
+          <td style="text-align:right;font-weight:700;padding:6px 8px;color:var(--verde-800);">${bs(gTotal)}</td>
         </tr>`;
-      }).join('');
+      });
 
       cont.innerHTML = `
         <div class="form-card" style="max-width:1000px;">
@@ -7703,43 +7745,38 @@
           <div class="form-section-body grid-responsive-2col" style="gap:32px;">
             <div>
               <h4 style="margin-bottom:8px;">Por método de pago</h4>
-              <table class="materia-table" style="width:100%;"><tbody>${Object.entries(porMetodo).map(([m, v]) => `<tr><td style="text-transform:capitalize;">${m}</td><td style="text-align:right; font-weight:600;">${bs(v)}</td></tr>`).join('') || '<tr><td>Sin datos</td></tr>'}</tbody></table>
+              <table class="materia-table" style="width:100%;"><tbody>${Object.entries(porMetodo).map(([m, v]) => `<tr><td style="text-transform:capitalize;">${m}</td><td style="text-align:right;font-weight:600;">${bs(v)}</td></tr>`).join('') || '<tr><td>Sin datos</td></tr>'}</tbody></table>
             </div>
             <div>
               <h4 style="margin-bottom:8px;">Por cajera</h4>
-              <table class="materia-table" style="width:100%;"><tbody>${Object.entries(porUsuario).map(([u, v]) => `<tr><td>${u}</td><td style="text-align:right; font-weight:600;">${bs(v)}</td></tr>`).join('') || '<tr><td>Sin datos</td></tr>'}</tbody></table>
+              <table class="materia-table" style="width:100%;"><tbody>${Object.entries(porUsuario).map(([u, v]) => `<tr><td>${u}</td><td style="text-align:right;font-weight:600;">${bs(v)}</td></tr>`).join('') || '<tr><td>Sin datos</td></tr>'}</tbody></table>
             </div>
           </div>
         </div>
-        <div class="form-card" style="max-width:1000px; margin-top:16px; overflow-x:auto;">
-          <div class="form-section-header"><h3>Detalle de pagos recibidos</h3></div>
-          <div class="form-section-body" style="padding:0; overflow-x:auto;">
-            <table class="materia-table" style="width:100%; min-width:1100px;">
+        <div class="form-card" style="max-width:1000px;margin-top:16px;overflow-x:auto;">
+          <div class="form-section-header"><h3>Detalle de pagos — agrupado por Semestre y Turno</h3></div>
+          <div class="form-section-body" style="padding:0;overflow-x:auto;">
+            <table class="materia-table" style="width:100%;min-width:1100px;">
               <thead>
                 <tr>
-                  <th>#</th>
-                  <th>Estudiante</th>
-                  <th>CI</th>
-                  <th style="text-align:center;">Semestre</th>
-                  <th style="text-align:center;">Cuota</th>
-                  <th style="text-align:center;">Estado</th>
-                  <th>Cajera</th>
-                  <th>Método</th>
-                  <th>Fecha y Hora</th>
+                  <th>#</th><th>Nro. Comp.</th><th>Estudiante</th><th>CI</th>
+                  <th style="text-align:center;">Semestre</th><th style="text-align:center;">Cuota</th>
+                  <th style="text-align:center;">Estado</th><th>Cajera</th><th>Método</th>
+                  <th>Fecha y Hora</th><th>Pagado Por</th>
                   <th style="text-align:right;">Efectivo (Bs)</th>
                   <th style="text-align:right;">Transferencia (Bs)</th>
                   <th style="text-align:right;">QR (Bs)</th>
                   <th style="text-align:right;">Monto Total</th>
                 </tr>
               </thead>
-              <tbody>${filasPagos || '<tr><td colspan="13" style="text-align:center;">Sin pagos en este rango</td></tr>'}</tbody>
+              <tbody>${filasTodas || `<tr><td colspan="${COLS}" style="text-align:center;">Sin pagos en este rango</td></tr>`}</tbody>
               <tfoot>
                 <tr>
-                  <td colspan="9" style="text-align:right; font-weight:700; padding:8px;">TOTALES:</td>
-                  <td style="text-align:right; font-weight:700; padding:8px;">${bs(totalEfectivo)}</td>
-                  <td style="text-align:right; font-weight:700; padding:8px;">${bs(totalTransferencia)}</td>
-                  <td style="text-align:right; font-weight:700; padding:8px;">${bs(totalQR)}</td>
-                  <td style="text-align:right; font-weight:700; padding:8px; color:var(--verde-800);">${bs(totalGeneral)}</td>
+                  <td colspan="11" style="text-align:right;font-weight:700;padding:8px;">TOTAL GENERAL:</td>
+                  <td style="text-align:right;font-weight:700;padding:8px;">${bs(totalEfectivo)}</td>
+                  <td style="text-align:right;font-weight:700;padding:8px;">${bs(totalTransferencia)}</td>
+                  <td style="text-align:right;font-weight:700;padding:8px;">${bs(totalQR)}</td>
+                  <td style="text-align:right;font-weight:700;padding:8px;color:var(--verde-800);">${bs(totalGeneral)}</td>
                 </tr>
               </tfoot>
             </table>
@@ -7876,21 +7913,24 @@
       doc.text('Detalle de pagos recibidos', 14, nextY);
       doc.autoTable({
         startY: nextY + 3,
-        head: [['#', 'Estudiante', 'CI', 'Semestre', 'Cuota', 'Estado', 'Cajera', 'Método', 'Fecha', 'Efectivo', 'Transferencia', 'QR', 'Total']],
+        head: [['#', 'Comp.', 'Estudiante', 'CI', 'Sem.', 'Cuota', 'Estado', 'Cajera', 'Método', 'Fecha', 'Pagador', 'Efec.', 'Trans.', 'QR', 'Total']],
         body: c.pagos.map((p, i) => {
           const cajera = c.userMap.get(p.registrado_por) || 'Desc.';
           const est = p.estudiantes || {};
           const fecha = new Date(p.fecha_pago).toLocaleDateString('es-BO');
           const semestre = est.semestre || '-';
-          const cuota = p.cuotas?.numero_cuota ? `Cuota ${p.cuotas.numero_cuota}` : '-';
+          const cuota = p.cuotas?.numero_cuota ? `C${p.cuotas.numero_cuota}` : '-';
           const estado = est.estado_financiero || 'PAGADO';
           const met = (p.metodo_pago || '').toLowerCase().trim();
           const montoEf = met === 'efectivo' ? bs(p.monto) : '-';
           const montoTr = met === 'transferencia' ? bs(p.monto) : '-';
           const montoQr = met === 'qr' ? bs(p.monto) : '-';
+          const comprobante = p.numero_comprobante_externo || '-';
+          const pagadoPor = p.pagador_tipo === 'otro' ? (p.pagador_nombre || 'Otro') : 'Propio';
 
           return [
             i + 1,
+            comprobante,
             `${est.apellidos || ''} ${est.nombres || ''}`.trim(),
             est.ci || '',
             semestre,
@@ -7899,22 +7939,23 @@
             cajera,
             p.metodo_pago,
             fecha,
+            pagadoPor,
             montoEf,
             montoTr,
             montoQr,
             bs(p.monto)
           ];
         }),
-        foot: [['', '', '', '', '', '', '', '', 'TOTALES', bs(c.totalEfectivo || 0), bs(c.totalTransferencia || 0), bs(c.totalQR || 0), bs(c.totalGeneral)]],
+        foot: [['', '', '', '', '', '', '', '', '', '', 'TOTALES', bs(c.totalEfectivo || 0), bs(c.totalTransferencia || 0), bs(c.totalQR || 0), bs(c.totalGeneral)]],
         headStyles: { fillColor: [20, 108, 70], textColor: [255, 255, 255], fontSize: 7.5 },
         footStyles: { fillColor: [240, 245, 242], fontStyle: 'bold', fontSize: 7.5 },
         styles: { fontSize: 7.5, cellPadding: 2 },
         columnStyles: {
           0: { cellWidth: 8 },
-          9: { halign: 'right' },
-          10: { halign: 'right' },
           11: { halign: 'right' },
-          12: { halign: 'right', fontStyle: 'bold' }
+          12: { halign: 'right' },
+          13: { halign: 'right' },
+          14: { halign: 'right', fontStyle: 'bold' }
         },
         alternateRowStyles: { fillColor: [240, 245, 242] }
       });
@@ -7957,6 +7998,7 @@
 
       ws1.columns = [
         { key: 'num', width: 6 },
+        { key: 'comp', width: 12 },
         { key: 'estudiante', width: 35 },
         { key: 'ci', width: 13 },
         { key: 'semestre', width: 14 },
@@ -7965,6 +8007,7 @@
         { key: 'cajera', width: 20 },
         { key: 'metodo', width: 14 },
         { key: 'fecha', width: 18 },
+        { key: 'pagador', width: 25 },
         { key: 'efectivo', width: 15 },
         { key: 'transferencia', width: 18 },
         { key: 'qr', width: 15 },
@@ -7972,7 +8015,7 @@
       ];
 
       const hdr1 = ws1.getRow(2);
-      hdr1.values = ['#', 'Estudiante', 'CI', 'Semestre', 'Cuota', 'Estado', 'Cajera', 'Método', 'Fecha y Hora', 'Efectivo (Bs)', 'Transferencia (Bs)', 'QR (Bs)', 'Monto Total (Bs)'];
+      hdr1.values = ['#', 'Nro. Comp.', 'Estudiante', 'CI', 'Semestre', 'Cuota', 'Estado', 'Cajera', 'Método', 'Fecha y Hora', 'Pagado Por', 'Efectivo (Bs)', 'Transferencia (Bs)', 'QR (Bs)', 'Monto Total (Bs)'];
       hdr1.font = { bold: true, color: { argb: 'FFFFFFFF' } };
       hdr1.eachCell(cell => cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF146C46' } });
 
@@ -7988,9 +8031,12 @@
         const tr = met === 'transferencia' ? Number(p.monto) : 0;
         const qr = met === 'qr' ? Number(p.monto) : 0;
         const total = Number(p.monto);
+        const comprobante = p.numero_comprobante_externo || '-';
+        const pagadoPor = p.pagador_tipo === 'otro' ? (p.pagador_nombre || 'Otro') : 'Propio';
 
         ws1.addRow([
           i + 1,
+          comprobante,
           `${est.apellidos || ''} ${est.nombres || ''}`.trim(),
           est.ci || '',
           semestre,
@@ -7999,6 +8045,7 @@
           cajera,
           p.metodo_pago,
           fecha,
+          pagadoPor,
           ef,
           tr,
           qr,
@@ -8006,9 +8053,9 @@
         ]);
       });
 
-      const totalRow = ws1.addRow(['', '', '', '', '', '', '', '', 'TOTALES', c.totalEfectivo || 0, c.totalTransferencia || 0, c.totalQR || 0, c.totalGeneral]);
+      const totalRow = ws1.addRow(['', '', '', '', '', '', '', '', '', '', 'TOTALES', c.totalEfectivo || 0, c.totalTransferencia || 0, c.totalQR || 0, c.totalGeneral]);
       totalRow.font = { bold: true };
-      [10, 11, 12, 13].forEach(colIndex => {
+      [12, 13, 14, 15].forEach(colIndex => {
         totalRow.getCell(colIndex).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCE5D6' } };
       });
 
@@ -9119,7 +9166,7 @@
             </div>
           </div>
           <div style="display:flex; gap: 6px; flex-wrap: wrap;">
-            <button onclick="window.abrirVisorCalificacionesAdmin('${it.codigo}', '${it.nombre}', '${it.turno}', '${it.idSemestre}')" class="btn-secundario" style="flex:1; padding: 6px; font-size: 12px;">Ver Notas</button>
+            <button onclick="window.abrirVisorCalificacionesAdmin('${it.codigo}', '${it.nombre}', '${it.turno}', '${it.idSemestre}', '${it.docente}')" class="btn-secundario" style="flex:1; padding: 6px; font-size: 12px;">Ver Notas</button>
             <button onclick="window.abrirVisorAsistenciaAdmin('${it.codigo}', '${it.nombre}', '${it.turno}', '${it.idSemestre}')" class="btn-secundario" style="flex:1; padding: 6px; font-size: 12px;">Auditar Asistencia</button>
           </div>
         </div>`;
@@ -9128,13 +9175,16 @@
       contenedor.innerHTML = html;
     };
 
-    window.abrirVisorCalificacionesAdmin = async function (codigo, nombre, turno, semestreId) {
+    window.abrirVisorCalificacionesAdmin = async function (codigo, nombre, turno, semestreId, docente) {
       document.querySelectorAll('.seccion').forEach(s => s.classList.remove('activa'));
       document.getElementById('seccion-visor-admin-notas').classList.add('activa');
       document.getElementById('tituloAdminNotas').textContent = nombre;
       document.getElementById('subtituloAdminNotas').textContent = `Cód: ${codigo} · Semestre ${semestreId} · Turno ${turno}`;
+      const elDocente = document.getElementById('docenteAdminNotas');
+      if (elDocente) elDocente.textContent = (docente && docente !== 'Sin Asignar') ? `Docente: ${docente}` : '';
 
       window.materiaAdminNotasActual = codigo;
+      window.docenteAdminNotasActual = docente || '';
 
       document.getElementById('tablaAdminNotasHead').innerHTML = '<tr>' + CABECERA_NOTAS.map(h => `<th>${h}</th>`).join('') + '</tr>';
       const tbody = document.getElementById('tablaAdminNotasBody');
@@ -10030,7 +10080,8 @@
       subCelda.alignment = { horizontal: 'center' };
 
       ws.mergeCells(3, 1, 3, totalCols);
-      ws.getCell(3, 1).value = `Materia: ${titulo} | ${subtitulo} | Generado por: Administración`;
+      const docenteXls = window.docenteAdminNotasActual || '';
+      ws.getCell(3, 1).value = `Materia: ${titulo}${docenteXls ? ' | Docente: ' + docenteXls : ''} | ${subtitulo} | Generado por: Administración`;
       ws.getCell(3, 1).font = { name: 'Arial', size: 10, italic: true };
 
       const headerRow = ws.getRow(5);
@@ -10073,7 +10124,8 @@
 
       doc.setFontSize(9);
       doc.setFont("helvetica", "normal");
-      doc.text(`${titulo} | ${subtitulo} | Generado por: Administración | Fecha: ${fecha}`, doc.internal.pageSize.getWidth() / 2, 74, { align: "center" });
+      const docentePdf = window.docenteAdminNotasActual || '';
+      doc.text(`${titulo}${docentePdf ? ' | Docente: ' + docentePdf : ''} | ${subtitulo} | Generado por: Administración | Fecha: ${fecha}`, doc.internal.pageSize.getWidth() / 2, 74, { align: "center" });
 
       const dataTabla = window.estudiantesAdminNotasCache.map((est, idx) => filaNotasExport(est, idx, codigoMat, window.cfgTrimestres));
 
@@ -10106,7 +10158,9 @@
       html += logoNotasWordHtml;
       html += '<h2>INSTITUTO TECNOLOGICO TESLAVI<\/h2>';
       html += '<h3>PLANILLA DE CALIFICACIONES POR TRIMESTRE<\/h3>';
+      const docenteWord = window.docenteAdminNotasActual || '';
       html += `<p><strong>Materia:<\/strong> ${titulo}<\/p>`;
+      if (docenteWord) html += `<p><strong>Docente:<\/strong> ${docenteWord}<\/p>`;
       html += `<p><strong>Detalle:<\/strong> ${subtitulo}<\/p>`;
       html += `<p><strong>Generado por:<\/strong> Administración<\/p>`;
       html += `<p><strong>Fecha de impresión:<\/strong> ${fecha}<\/p>`;
