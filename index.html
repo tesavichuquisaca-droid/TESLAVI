@@ -5544,7 +5544,8 @@
       tbody.innerHTML = window.filaCargando(10, 'Cargando estudiantes...');
 
       const esAdmin = (window.usuarioActual?.rol === 'Administrador' || window.usuarioActual?.rol === 'ADMIN' || window.usuarioActual?.rol === 'SuperAdmin');
-      document.getElementById('cardConfigFinancieraGeneral').style.display = esAdmin ? 'block' : 'none';
+      const tienePermisoFinanciero = esAdmin || (window.seccionesPermitidas && window.seccionesPermitidas.has('financiero'));
+      document.getElementById('cardConfigFinancieraGeneral').style.display = tienePermisoFinanciero ? 'block' : 'none';
       document.getElementById('cardCambioGestion').style.display = esAdmin ? 'block' : 'none';
 
       await window.cargarConfigFinancieraDefault();
