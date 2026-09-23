@@ -807,7 +807,7 @@
       const sinEvaluar = t1total === 0 && t2total === 0;
       return { n, a1, a2, t1total, t2total, semestral, notaFinal, aprobado: notaFinal >= 61, sinEvaluar };
     }
-    function fmtNum(n) { return (Math.round(n * 100) / 100).toFixed(2); }
+    function fmtNum(n) { return (n == null || isNaN(n)) ? '0' : String(Math.round(Number(n))); }
 
     function renderizarNotas(est) {
       document.getElementById('notasNombreEst').textContent = `${est.apellidos} ${est.nombres}`;
@@ -851,7 +851,7 @@
         `;
       }).join('');
 
-      const promedio = countMaterias > 0 ? (Math.round((sumProm / countMaterias) * 100) / 100).toFixed(2) : '—';
+      const promedio = countMaterias > 0 ? Math.round(sumProm / countMaterias) : '—';
       document.getElementById('promedioFinalEst').textContent = promedio;
     }
   </script>

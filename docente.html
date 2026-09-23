@@ -305,17 +305,18 @@
             <div id="tab-calificar-t1" class="vista-tab activa">
               <div class="card list-panel" style="padding:0;">
                 <div class="tabla-scroll-wrap">
-                <table class="materia-table" style="min-width:940px;">
+                <table class="materia-table" style="min-width:1080px;">
                    <thead>
                       <tr>
                          <th style="width:4%">#</th>
                          <th style="width:16%">Estudiante</th>
-                         <th style="width:12%">Asistencia (20)</th>
-                         <th style="width:14%">Destreza (20)</th>
-                         <th style="width:14%">Investig. (20)</th>
-                         <th style="width:14%">PrÃ¡cticas (10)</th>
-                         <th style="width:14%">Examen (30)</th>
-                         <th style="width:12%">Subtotal T1</th>
+                         <th style="width:10%">Asistencia (20 pts)</th>
+                         <th style="width:12%">Destreza (20 pts)</th>
+                         <th style="width:12%">Investig. (20 pts)</th>
+                         <th style="width:11%">Prácticas (10 pts)</th>
+                         <th style="width:12%; background:#104F36; color:#FFFFFF; text-align:center;">Subtotal 70% (70 pts)</th>
+                         <th style="width:12%; background:#B78103; color:#FFFFFF; text-align:center;">Examen T1 30% (30 pts)</th>
+                         <th style="width:11%">Subtotal T1 (100 pts)</th>
                       </tr>
                    </thead>
                    <tbody id="tablaT1Body"></tbody>
@@ -327,17 +328,18 @@
             <div id="tab-calificar-t2" class="vista-tab">
               <div class="card list-panel" style="padding:0;">
                 <div class="tabla-scroll-wrap">
-                <table class="materia-table" style="min-width:940px;">
+                <table class="materia-table" style="min-width:1080px;">
                    <thead>
                       <tr>
                          <th style="width:4%">#</th>
                          <th style="width:16%">Estudiante</th>
-                         <th style="width:12%">Asistencia (20)</th>
-                         <th style="width:14%">Destreza (20)</th>
-                         <th style="width:14%">Investig. (20)</th>
-                         <th style="width:14%">PrÃ¡cticas (10)</th>
-                         <th style="width:14%">Examen (30)</th>
-                         <th style="width:12%">Subtotal T2</th>
+                         <th style="width:10%">Asistencia (20 pts)</th>
+                         <th style="width:12%">Destreza (20 pts)</th>
+                         <th style="width:12%">Investig. (20 pts)</th>
+                         <th style="width:11%">Prácticas (10 pts)</th>
+                         <th style="width:12%; background:#104F36; color:#FFFFFF; text-align:center;">Subtotal 70% (70 pts)</th>
+                         <th style="width:12%; background:#B78103; color:#FFFFFF; text-align:center;">Examen T2 30% (30 pts)</th>
+                         <th style="width:11%">Subtotal T2 (100 pts)</th>
                       </tr>
                    </thead>
                    <tbody id="tablaT2Body"></tbody>
@@ -772,7 +774,7 @@
       const sinEvaluar = t1total === 0 && t2total === 0;
       return { n, a1, a2, t1total, t2total, semestral, habilitaRecuperatorio, notaFinal, aprobado: notaFinal >= 61, sinEvaluar };
     }
-    function fmtNum(n) { return (Math.round(n * 100) / 100).toFixed(2); }
+    function fmtNum(n) { return (n == null || isNaN(n)) ? '0' : String(Math.round(Number(n))); }
     function estadoBadgeHtml(sinEvaluar, aprobado) {
       if (sinEvaluar) return `<span style="color:var(--texto-suave); font-size:13px;">Sin evaluar</span>`;
       return aprobado
@@ -924,14 +926,16 @@
         const nombreCorto = `${est.apellidos} <span style="font-weight:400;">${est.nombres}</span>`;
 
         const campoPonderado = (tipoPrefijo, campo, max, crudaVal, ponderadoVal) => `
-          <div style="display:inline-flex; align-items:center; gap:2px;" title="Nota sobre 100 â†’ se pondera automÃ¡ticamente sobre ${max}">
-             <input type="number" min="0" max="100" step="0.01" class="select-css nota-cruda-input" style="width:56px; text-align:right; padding:4px 3px; font-size:12px;" data-tipo-cruda="${tipoPrefijo}_${campo}" data-max="${max}" value="${crudaVal}" placeholder="0-100" onchange="window.recalcularNotaPonderada(this)" onkeydown="window.manejarTeclaNota(event,this)">
+          <div style="display:inline-flex; align-items:center; gap:2px;" title="Nota sobre 100 → se pondera automáticamente sobre ${max}">
+             <input type="number" min="0" max="100" step="1" class="select-css nota-cruda-input" style="width:56px; text-align:right; padding:4px 3px; font-size:12px;" data-tipo-cruda="${tipoPrefijo}_${campo}" data-max="${max}" value="${crudaVal}" placeholder="0-100" onchange="window.recalcularNotaPonderada(this)" onkeydown="window.manejarTeclaNota(event,this)">
              <span style="font-size:10px; color:var(--texto-suave);">&rarr;</span>
-             <input type="number" min="0" max="${max}" step="0.01" class="select-css nota-input" style="width:48px; text-align:right; padding:4px 3px; font-size:12px; background:var(--fondo); color:var(--texto-suave);" data-tipo="${tipoPrefijo}_${campo}" value="${ponderadoVal}" readonly tabindex="-1">
+             <input type="number" min="0" max="${max}" step="1" class="select-css nota-input" style="width:48px; text-align:right; padding:4px 3px; font-size:12px; background:var(--fondo); color:var(--texto-suave);" data-tipo="${tipoPrefijo}_${campo}" value="${ponderadoVal}" readonly tabindex="-1">
              <span style="font-size:10px; color:var(--texto-suave);">/${max}</span>
           </div>`;
 
-        const filaTrimestre = (n, a, tipoPrefijo, subtotal) => `
+        const filaTrimestre = (n, a, tipoPrefijo, subtotal) => {
+          const sub70 = a.pts + (Number(n.destreza) || 0) + (Number(n.investigacion) || 0) + (Number(n.practicas) || 0);
+          return `
           <tr data-id="${est.id}">
              <td style="color:var(--texto-suave);">${index}</td>
              <td style="font-weight:600; color:var(--verde-950); font-size:13.5px;">${nombreCorto}</td>
@@ -939,9 +943,11 @@
              <td>${campoPonderado(tipoPrefijo, 'destreza', 20, n.destreza_cruda, n.destreza)}</td>
              <td>${campoPonderado(tipoPrefijo, 'investigacion', 20, n.investigacion_cruda, n.investigacion)}</td>
              <td>${campoPonderado(tipoPrefijo, 'practicas', 10, n.practicas_cruda, n.practicas)}</td>
-             <td>${campoPonderado(tipoPrefijo, 'examen', 30, n.examen_cruda, n.examen)}</td>
+             <td class="subtotal70-text" style="text-align:center; font-weight:bold; background:#E8F5E9; color:#1B5E20; font-size:13px;">${fmtNum(sub70)}</td>
+             <td style="background:#FFF8E1;">${campoPonderado(tipoPrefijo, 'examen', 30, n.examen_cruda, n.examen)}</td>
              <td class="subtotal-text" style="font-weight:bold;">${fmtNum(subtotal)}</td>
           </tr>`;
+        };
 
         htmlT1 += filaTrimestre(r.n.t1, r.a1, 't1', r.t1total);
         htmlT2 += filaTrimestre(r.n.t2, r.a2, 't2', r.t2total);
@@ -954,7 +960,7 @@
              <td class="resumen-t2-text" style="text-align:center;">${fmtNum(r.t2total)}</td>
              <td class="resumen-semestral-text" style="text-align:center; font-weight:600;">${fmtNum(r.semestral)}</td>
              <td style="text-align:center;">
-                <input type="number" min="0" max="100" step="0.01" class="select-css rec-input" style="width:70px; text-align:right; padding:4px 6px;" ${r.habilitaRecuperatorio ? '' : 'disabled'} value="${r.habilitaRecuperatorio && r.n.recuperatorio !== null ? r.n.recuperatorio : ''}" placeholder="${r.habilitaRecuperatorio ? '0-100' : 'â€”'}" onchange="window.recalcularEstudiantePorId('${est.id}')" onkeydown="window.manejarTeclaNota(event,this)">
+                <input type="number" min="0" max="100" step="1" class="select-css rec-input" style="width:70px; text-align:right; padding:4px 6px;" ${r.habilitaRecuperatorio ? '' : 'disabled'} value="${r.habilitaRecuperatorio && r.n.recuperatorio !== null ? r.n.recuperatorio : ''}" placeholder="${r.habilitaRecuperatorio ? '0-100' : '—'}" onchange="window.recalcularEstudiantePorId('${est.id}')" onkeydown="window.manejarTeclaNota(event,this)">
              </td>
              <td class="resumen-final-text" style="text-align:center; font-weight:bold; color: ${r.aprobado ? 'var(--verde-950)' : '#D32F2F'};">${fmtNum(r.notaFinal)}</td>
              <td class="resumen-estado-text">${estadoBadgeHtml(r.sinEvaluar, r.aprobado)}</td>
@@ -1036,7 +1042,7 @@
       const tr = inputCruda.closest('tr');
       const ponderadoInput = tr.querySelector(`[data-tipo="${tipoCruda}"]`);
       if (!ponderadoInput) return;
-      const ponderado = val === '' ? 0 : Math.round((val / 100) * max * 100) / 100;
+      const ponderado = val === '' ? 0 : Math.round((val / 100) * max);
       ponderadoInput.value = ponderado;
       window.recalcularFila(ponderadoInput);
     };
@@ -1057,11 +1063,15 @@
       const t1 = { destreza: getVal(trT1, 't1_destreza'), investigacion: getVal(trT1, 't1_investigacion'), practicas: getVal(trT1, 't1_practicas'), examen: getVal(trT1, 't1_examen') };
       const t2 = { destreza: getVal(trT2, 't2_destreza'), investigacion: getVal(trT2, 't2_investigacion'), practicas: getVal(trT2, 't2_practicas'), examen: getVal(trT2, 't2_examen') };
 
+      const sub70_t1 = a1.pts + t1.destreza + t1.investigacion + t1.practicas;
+      const sub70_t2 = a2.pts + t2.destreza + t2.investigacion + t2.practicas;
       const t1total = subtotalTrimestre(t1, a1.pts);
       const t2total = subtotalTrimestre(t2, a2.pts);
       const semestral = (t1total + t2total) / 2;
       const habilita = semestral >= 42 && semestral < 61;
 
+      trT1.querySelector('.subtotal70-text').textContent = fmtNum(sub70_t1);
+      trT2.querySelector('.subtotal70-text').textContent = fmtNum(sub70_t2);
       trT1.querySelector('.subtotal-text').textContent = fmtNum(t1total);
       trT2.querySelector('.subtotal-text').textContent = fmtNum(t2total);
       trResumen.querySelector('.resumen-t1-text').textContent = fmtNum(t1total);
@@ -1141,16 +1151,18 @@
       }
     };
 
-    const CABECERA_NOTAS = ['#', 'Estudiante', 'Asist. T1', 'Destr. T1', 'Invest. T1', 'PrÃ¡ct. T1', 'Exam. T1', 'Subtot. T1', 'Asist. T2', 'Destr. T2', 'Invest. T2', 'PrÃ¡ct. T2', 'Exam. T2', 'Subtot. T2', 'Semestral', 'Recuperat.', 'Nota Final', 'Estado'];
+    const CABECERA_NOTAS = ['#', 'Estudiante', 'Asist. T1 (20 pts)', 'Destr. T1 (20 pts)', 'Invest. T1 (20 pts)', 'Práct. T1 (10 pts)', 'Subtotal 70% (70 pts)', 'Examen T1 30% (30 pts)', 'Subtot. T1 (100 pts)', 'Asist. T2 (20 pts)', 'Destr. T2 (20 pts)', 'Invest. T2 (20 pts)', 'Práct. T2 (10 pts)', 'Subtotal 70% (70 pts)', 'Examen T2 30% (30 pts)', 'Subtot. T2 (100 pts)', 'Semestral', 'Recuperat.', 'Nota Final', 'Estado'];
 
     function filaNotasExport(est, idx, codigo) {
       const r = calcularNotaMateria(est, codigo, window.cfgTrimestres);
       const estado = r.sinEvaluar ? 'Sin evaluar' : (r.aprobado ? 'Aprobado' : 'Reprobado');
+      const sub70_t1 = r.a1.pts + r.n.t1.destreza + r.n.t1.investigacion + r.n.t1.practicas;
+      const sub70_t2 = r.a2.pts + r.n.t2.destreza + r.n.t2.investigacion + r.n.t2.practicas;
       return [
         idx + 1, `${est.apellidos}, ${est.nombres}`,
-        r.a1.pts, r.n.t1.destreza, r.n.t1.investigacion, r.n.t1.practicas, r.n.t1.examen, fmtNum(r.t1total),
-        r.a2.pts, r.n.t2.destreza, r.n.t2.investigacion, r.n.t2.practicas, r.n.t2.examen, fmtNum(r.t2total),
-        fmtNum(r.semestral), (r.n.recuperatorio === null || r.n.recuperatorio === undefined) ? 'â€”' : r.n.recuperatorio,
+        r.a1.pts, r.n.t1.destreza, r.n.t1.investigacion, r.n.t1.practicas, fmtNum(sub70_t1), r.n.t1.examen, fmtNum(r.t1total),
+        r.a2.pts, r.n.t2.destreza, r.n.t2.investigacion, r.n.t2.practicas, fmtNum(sub70_t2), r.n.t2.examen, fmtNum(r.t2total),
+        fmtNum(r.semestral), (r.n.recuperatorio === null || r.n.recuperatorio === undefined) ? '—' : r.n.recuperatorio,
         fmtNum(r.notaFinal), estado
       ];
     }
@@ -1197,11 +1209,30 @@
       const headerRow = ws.getRow(5);
       headerRow.values = CABECERA_NOTAS;
       headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-      headerRow.eachCell(cell => { cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF146C46' } }; });
+      headerRow.eachCell((cell, colNum) => {
+        if (colNum === 7 || colNum === 14) {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF104F36' } };
+        } else if (colNum === 8 || colNum === 15) {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFB78103' } };
+        } else {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF146C46' } };
+        }
+      });
 
       let rowIndex = 6;
       window.estudiantesCalificacionCache.forEach((est, idx) => {
-        ws.getRow(rowIndex).values = filaNotasExport(est, idx, codigo);
+        const row = ws.getRow(rowIndex);
+        row.values = filaNotasExport(est, idx, codigo);
+        [7, 14].forEach(c => {
+          const cell = row.getCell(c);
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8F5E9' } };
+          cell.font = { bold: true, color: { argb: 'FF1B5E20' } };
+        });
+        [8, 15].forEach(c => {
+          const cell = row.getCell(c);
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF8E1' } };
+          cell.font = { bold: true, color: { argb: 'FF785402' } };
+        });
         rowIndex++;
       });
 
@@ -1243,10 +1274,30 @@
         startY: 90,
         head: [CABECERA_NOTAS],
         body: dataTabla,
-        headStyles: { fillColor: [20, 108, 70], textColor: [255, 255, 255], fontSize: 7.5, halign: 'center' },
-        styles: { fontSize: 7.5, cellPadding: 2, halign: 'center' },
-        columnStyles: { 1: { halign: 'left', minCellWidth: 90 } },
-        alternateRowStyles: { fillColor: [240, 245, 242] }
+        headStyles: { fillColor: [20, 108, 70], textColor: [255, 255, 255], fontSize: 7, halign: 'center' },
+        styles: { fontSize: 7, cellPadding: 2, halign: 'center' },
+        columnStyles: { 1: { halign: 'left', minCellWidth: 80 } },
+        alternateRowStyles: { fillColor: [240, 245, 242] },
+        didParseCell: function (data) {
+          if (data.section === 'head') {
+            if (data.column.index === 6 || data.column.index === 13) {
+              data.cell.styles.fillColor = [16, 79, 54];
+            } else if (data.column.index === 7 || data.column.index === 14) {
+              data.cell.styles.fillColor = [183, 129, 3];
+            }
+          }
+          if (data.section === 'body') {
+            if (data.column.index === 6 || data.column.index === 13) {
+              data.cell.styles.fillColor = [232, 245, 233];
+              data.cell.styles.textColor = [27, 94, 32];
+              data.cell.styles.fontStyle = 'bold';
+            } else if (data.column.index === 7 || data.column.index === 14) {
+              data.cell.styles.fillColor = [255, 248, 225];
+              data.cell.styles.textColor = [120, 84, 2];
+              data.cell.styles.fontStyle = 'bold';
+            }
+          }
+        }
       });
 
       doc.save(`Calificaciones_${codigo}.pdf`);
@@ -1272,13 +1323,21 @@
       html += `<p><strong>Materia:<\/strong> ${titulo}<\/p>`;
       html += `<p><strong>Detalle:<\/strong> ${subtitulo}<\/p>`;
       html += `<p><strong>Docente:<\/strong> ${docente}<\/p>`;
-      html += `<p><strong>Fecha de impresiÃ³n:<\/strong> ${fecha}<\/p>`;
+      html += `<p><strong>Fecha de impresión:<\/strong> ${fecha}<\/p>`;
 
-      html += '<table><thead><tr>' + CABECERA_NOTAS.map(h => `<th>${h}<\/th>`).join('') + '<\/tr><\/thead><tbody>';
+      html += '<table><thead><tr>' + CABECERA_NOTAS.map((h, i) => {
+        if (i === 6 || i === 13) return `<th style="background-color: #104F36; color: white;">${h}</th>`;
+        if (i === 7 || i === 14) return `<th style="background-color: #B78103; color: white;">${h}</th>`;
+        return `<th>${h}</th>`;
+      }).join('') + '<\/tr><\/thead><tbody>';
 
       window.estudiantesCalificacionCache.forEach((est, idx) => {
         const fila = filaNotasExport(est, idx, codigo);
-        html += '<tr>' + fila.map(v => `<td>${v}<\/td>`).join('') + '<\/tr>';
+        html += '<tr>' + fila.map((v, i) => {
+          if (i === 6 || i === 13) return `<td style="background-color: #E8F5E9; color: #1B5E20; font-weight: bold;">${v}</td>`;
+          if (i === 7 || i === 14) return `<td style="background-color: #FFF8E1; color: #785402; font-weight: bold;">${v}</td>`;
+          return `<td>${v}</td>`;
+        }).join('') + '<\/tr>';
       });
 
       html += '<\/tbody><\/table><\/body><\/html>';

@@ -4220,7 +4220,7 @@
       const sinEvaluar = t1total === 0 && t2total === 0;
       return { n, a1, a2, t1total, t2total, semestral, habilitaRecuperatorio, notaFinal, aprobado: notaFinal >= 61, sinEvaluar };
     }
-    function fmtNum(n) { return Number.isInteger(n) ? String(n) : n.toFixed(1); }
+    function fmtNum(n) { return (n == null || isNaN(n)) ? '0' : String(Math.round(Number(n))); }
     /* Escala de color de notas — §6.8/§6.11 del brief: mismas 4 bandas
        (reprobado / al límite / bien / excelente) en Centralizador,
        Libretas y Estadísticas, vía los tokens --nota-*. */
@@ -4236,14 +4236,16 @@
         ? `<span class="materia-badge" style="background: var(--ok-bg); color: var(--ok-texto);">Aprobado</span>`
         : `<span class="materia-badge" style="background: var(--error-bg); color: var(--error-texto);">Reprobado</span>`;
     }
-    const CABECERA_NOTAS = ['#', 'Estudiante', 'Asist. T1', 'Destr. T1', 'Invest. T1', 'Práct. T1', 'Exam. T1', 'Subtot. T1', 'Asist. T2', 'Destr. T2', 'Invest. T2', 'Práct. T2', 'Exam. T2', 'Subtot. T2', 'Semestral', 'Recuperat.', 'Nota Final', 'Estado'];
+    const CABECERA_NOTAS = ['#', 'Estudiante', 'Asist. T1 (20 pts)', 'Destr. T1 (20 pts)', 'Invest. T1 (20 pts)', 'Práct. T1 (10 pts)', 'Subtotal 70% (70 pts)', 'Examen T1 30% (30 pts)', 'Subtot. T1 (100 pts)', 'Asist. T2 (20 pts)', 'Destr. T2 (20 pts)', 'Invest. T2 (20 pts)', 'Práct. T2 (10 pts)', 'Subtotal 70% (70 pts)', 'Examen T2 30% (30 pts)', 'Subtot. T2 (100 pts)', 'Semestral', 'Recuperat.', 'Nota Final', 'Estado'];
     function filaNotasExport(est, idx, codigo, cfgTrimestres) {
       const r = calcularNotaMateria(est, codigo, cfgTrimestres);
       const estado = r.sinEvaluar ? 'Sin evaluar' : (r.aprobado ? 'Aprobado' : 'Reprobado');
+      const sub70_t1 = r.a1.pts + r.n.t1.destreza + r.n.t1.investigacion + r.n.t1.practicas;
+      const sub70_t2 = r.a2.pts + r.n.t2.destreza + r.n.t2.investigacion + r.n.t2.practicas;
       return [
         idx + 1, `${est.apellidos}, ${est.nombres}`,
-        r.a1.pts, r.n.t1.destreza, r.n.t1.investigacion, r.n.t1.practicas, r.n.t1.examen, fmtNum(r.t1total),
-        r.a2.pts, r.n.t2.destreza, r.n.t2.investigacion, r.n.t2.practicas, r.n.t2.examen, fmtNum(r.t2total),
+        r.a1.pts, r.n.t1.destreza, r.n.t1.investigacion, r.n.t1.practicas, fmtNum(sub70_t1), r.n.t1.examen, fmtNum(r.t1total),
+        r.a2.pts, r.n.t2.destreza, r.n.t2.investigacion, r.n.t2.practicas, fmtNum(sub70_t2), r.n.t2.examen, fmtNum(r.t2total),
         fmtNum(r.semestral), (r.n.recuperatorio === null || r.n.recuperatorio === undefined) ? '—' : r.n.recuperatorio,
         fmtNum(r.notaFinal), estado
       ];
@@ -9243,7 +9245,11 @@
       window.materiaAdminNotasActual = codigo;
       window.docenteAdminNotasActual = docente || '';
 
-      document.getElementById('tablaAdminNotasHead').innerHTML = '<tr>' + CABECERA_NOTAS.map(h => `<th>${h}</th>`).join('') + '</tr>';
+      document.getElementById('tablaAdminNotasHead').innerHTML = '<tr>' + CABECERA_NOTAS.map((h, i) => {
+        if (i === 6 || i === 13) return `<th style="background:#104F36; color:#FFFFFF; text-align:center;">${h}</th>`;
+        if (i === 7 || i === 14) return `<th style="background:#B78103; color:#FFFFFF; text-align:center;">${h}</th>`;
+        return `<th>${h}</th>`;
+      }).join('') + '</tr>';
       const tbody = document.getElementById('tablaAdminNotasBody');
       const colspan = CABECERA_NOTAS.length;
       tbody.innerHTML = `<tr><td colspan="${colspan}" style="text-align: center; color: var(--texto-suave); padding: 32px 0;">Cargando estudiantes...</td></tr>`;
@@ -9270,6 +9276,8 @@
           if (i === 1) return `<td style="font-weight:600; color:var(--verde-950); font-size:13px; text-align:left;">${v}</td>`;
           if (i === fila.length - 1) return `<td>${estadoBadgeHtml(r.sinEvaluar, r.aprobado)}</td>`;
           if (i === fila.length - 2) return `<td style="font-weight:bold; color:${r.aprobado ? 'var(--verde-950)' : '#D32F2F'};">${v}</td>`;
+          if (i === 6 || i === 13) return `<td style="font-family: var(--f-datos); font-size:12.5px; font-weight:700; background:#E8F5E9; color:#1B5E20; text-align:center;">${v}</td>`;
+          if (i === 7 || i === 14) return `<td style="font-family: var(--f-datos); font-size:12.5px; font-weight:600; background:#FFF8E1; color:#785402; text-align:center;">${v}</td>`;
           return `<td style="font-family: var(--f-datos); font-size:12.5px;">${v}</td>`;
         }).join('')}</tr>`;
       }).join('');
@@ -9767,7 +9775,7 @@
       });
 
       // 3. Actualizar KPIs
-      const promGlobal = countPromediosGlobal > 0 ? (sumPromediosGlobal / countPromediosGlobal).toFixed(1) : 0;
+      const promGlobal = countPromediosGlobal > 0 ? Math.round(sumPromediosGlobal / countPromediosGlobal) : 0;
       window.animarContador(statPromedioGlobal, promGlobal);
       window.animarContador(statTotalFaltas, totalFaltasGlobal);
       window.animarContador(statFaltasJust, totalFJGlobal);
@@ -9809,7 +9817,7 @@
         for (let i = 1; i <= 6; i++) {
           labelsRendimiento.push(`Sem. ${i}`);
           let prom = rendimientosPorSemestre[i].count > 0 ? (rendimientosPorSemestre[i].sum / rendimientosPorSemestre[i].count) : 0;
-          dataRendimiento.push(prom.toFixed(1));
+          dataRendimiento.push(Math.round(prom));
         }
       } else {
         labelsRendimiento = [`Semestre ${semestreFiltro}`];
@@ -10144,11 +10152,30 @@
       const headerRow = ws.getRow(5);
       headerRow.values = CABECERA_NOTAS;
       headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-      headerRow.eachCell(cell => { cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF146C46' } }; });
+      headerRow.eachCell((cell, colNum) => {
+        if (colNum === 7 || colNum === 14) {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF104F36' } };
+        } else if (colNum === 8 || colNum === 15) {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFB78103' } };
+        } else {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF146C46' } };
+        }
+      });
 
       let rowIndex = 6;
       window.estudiantesAdminNotasCache.forEach((est, idx) => {
-        ws.getRow(rowIndex).values = filaNotasExport(est, idx, codigoMat, window.cfgTrimestres);
+        const row = ws.getRow(rowIndex);
+        row.values = filaNotasExport(est, idx, codigoMat, window.cfgTrimestres);
+        [7, 14].forEach(c => {
+          const cell = row.getCell(c);
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8F5E9' } };
+          cell.font = { bold: true, color: { argb: 'FF1B5E20' } };
+        });
+        [8, 15].forEach(c => {
+          const cell = row.getCell(c);
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF8E1' } };
+          cell.font = { bold: true, color: { argb: 'FF785402' } };
+        });
         rowIndex++;
       });
 
@@ -10190,10 +10217,30 @@
         startY: 90,
         head: [CABECERA_NOTAS],
         body: dataTabla,
-        headStyles: { fillColor: [20, 108, 70], textColor: [255, 255, 255], fontSize: 7.5, halign: 'center' },
-        styles: { fontSize: 7.5, cellPadding: 2, halign: 'center' },
-        columnStyles: { 1: { halign: 'left', minCellWidth: 90 } },
-        alternateRowStyles: { fillColor: [240, 245, 242] }
+        headStyles: { fillColor: [20, 108, 70], textColor: [255, 255, 255], fontSize: 7, halign: 'center' },
+        styles: { fontSize: 7, cellPadding: 2, halign: 'center' },
+        columnStyles: { 1: { halign: 'left', minCellWidth: 80 } },
+        alternateRowStyles: { fillColor: [240, 245, 242] },
+        didParseCell: function (data) {
+          if (data.section === 'head') {
+            if (data.column.index === 6 || data.column.index === 13) {
+              data.cell.styles.fillColor = [16, 79, 54];
+            } else if (data.column.index === 7 || data.column.index === 14) {
+              data.cell.styles.fillColor = [183, 129, 3];
+            }
+          }
+          if (data.section === 'body') {
+            if (data.column.index === 6 || data.column.index === 13) {
+              data.cell.styles.fillColor = [232, 245, 233];
+              data.cell.styles.textColor = [27, 94, 32];
+              data.cell.styles.fontStyle = 'bold';
+            } else if (data.column.index === 7 || data.column.index === 14) {
+              data.cell.styles.fillColor = [255, 248, 225];
+              data.cell.styles.textColor = [120, 84, 2];
+              data.cell.styles.fontStyle = 'bold';
+            }
+          }
+        }
       });
 
       doc.save(`Calificaciones_${codigoMat}.pdf`);
@@ -10222,11 +10269,19 @@
       html += `<p><strong>Generado por:<\/strong> Administración<\/p>`;
       html += `<p><strong>Fecha de impresión:<\/strong> ${fecha}<\/p>`;
 
-      html += '<table><thead><tr>' + CABECERA_NOTAS.map(h => `<th>${h}<\/th>`).join('') + '<\/tr><\/thead><tbody>';
+      html += '<table><thead><tr>' + CABECERA_NOTAS.map((h, i) => {
+        if (i === 6 || i === 13) return `<th style="background-color: #104F36; color: white;">${h}</th>`;
+        if (i === 7 || i === 14) return `<th style="background-color: #B78103; color: white;">${h}</th>`;
+        return `<th>${h}</th>`;
+      }).join('') + '<\/tr><\/thead><tbody>';
 
       window.estudiantesAdminNotasCache.forEach((est, idx) => {
         const fila = filaNotasExport(est, idx, codigoMat, window.cfgTrimestres);
-        html += '<tr>' + fila.map(v => `<td>${v}<\/td>`).join('') + '<\/tr>';
+        html += '<tr>' + fila.map((v, i) => {
+          if (i === 6 || i === 13) return `<td style="background-color: #E8F5E9; color: #1B5E20; font-weight: bold;">${v}</td>`;
+          if (i === 7 || i === 14) return `<td style="background-color: #FFF8E1; color: #785402; font-weight: bold;">${v}</td>`;
+          return `<td>${v}</td>`;
+        }).join('') + '<\/tr>';
       });
 
       html += '<\/tbody><\/table><\/body><\/html>';
@@ -10538,7 +10593,7 @@
           }
         });
 
-        const promFinal = promedioCount > 0 ? (promedioSum / promedioCount).toFixed(1) : '—';
+        const promFinal = promedioCount > 0 ? String(Math.round(promedioSum / promedioCount)) : '—';
         const promNum = parseFloat(promFinal);
         const escalaProm = isNaN(promNum) ? null : colorEscalaNota(promNum);
         const colorProm = isNaN(promNum) ? 'var(--texto-suave)' : escalaProm.texto;
@@ -10575,13 +10630,13 @@
       let totalPromedioClase = 0;
       let totalPromedioCount = 0;
       materias.forEach((_, i) => {
-        const prom = contadorNotas[i] > 0 ? (sumaPromedios[i] / contadorNotas[i]).toFixed(1) : '—';
+        const prom = contadorNotas[i] > 0 ? String(Math.round(sumaPromedios[i] / contadorNotas[i])) : '—';
         const promN = parseFloat(prom);
         const c = isNaN(promN) ? 'rgba(255,255,255,0.5)' : colorEscalaSobreFondoOscuro(promN);
         footHtml += `<td style="text-align:center; font-family:var(--f-datos); font-size:13px; font-weight:700; color:${c}; border-left:1px solid rgba(255,255,255,0.12); padding:10px 4px;">${prom}</td>`;
         if (!isNaN(promN)) { totalPromedioClase += promN; totalPromedioCount++; }
       });
-      const promGeneral = totalPromedioCount > 0 ? (totalPromedioClase / totalPromedioCount).toFixed(1) : '—';
+      const promGeneral = totalPromedioCount > 0 ? String(Math.round(totalPromedioClase / totalPromedioCount)) : '—';
       const promGColor = isNaN(parseFloat(promGeneral)) ? 'rgba(255,255,255,0.5)' : colorEscalaSobreFondoOscuro(parseFloat(promGeneral));
       footHtml += `<td style="text-align:center; font-family:var(--f-datos); font-size:14px; font-weight:700; color:${promGColor}; border-left:2px solid rgba(255,255,255,0.25); padding:10px 12px; background:rgba(255,255,255,0.07);">${promGeneral}</td>`;
       footHtml += '</tr>';
@@ -10673,7 +10728,7 @@
           if (!r.sinEvaluar) { promediosPorMateria[i] += final; conteoPorMateria[i]++; sumEst += final; cntEst++; }
         });
 
-        const promEst = cntEst > 0 ? parseFloat((sumEst / cntEst).toFixed(1)) : '';
+        const promEst = cntEst > 0 ? Math.round(sumEst / cntEst) : '';
         rowData.push(promEst);
         fila.values = rowData;
 
@@ -10709,11 +10764,11 @@
       const promData = ['', 'Promedio de la clase'];
       let sumaGeneral = 0; let cntGeneral = 0;
       materias.forEach((_, i) => {
-        const p = conteoPorMateria[i] > 0 ? parseFloat((promediosPorMateria[i] / conteoPorMateria[i]).toFixed(1)) : '';
+        const p = conteoPorMateria[i] > 0 ? Math.round(promediosPorMateria[i] / conteoPorMateria[i]) : '';
         promData.push(p);
         if (typeof p === 'number') { sumaGeneral += p; cntGeneral++; }
       });
-      promData.push(cntGeneral > 0 ? parseFloat((sumaGeneral / cntGeneral).toFixed(1)) : '');
+      promData.push(cntGeneral > 0 ? Math.round(sumaGeneral / cntGeneral) : '');
       filaPromedios.values = promData;
       for (let c = 1; c <= totalCols; c++) {
         const cell = ws.getCell(estudiantes.length + 5, c);
@@ -10776,7 +10831,7 @@
           row.push(r.sinEvaluar ? '—' : fmtNum(r.notaFinal));
           if (!r.sinEvaluar) { promediosPorMateria[i] += r.notaFinal; conteoPorMateria[i]++; sumEst += r.notaFinal; cntEst++; }
         });
-        const promEst = cntEst > 0 ? (sumEst / cntEst).toFixed(1) : '—';
+        const promEst = cntEst > 0 ? String(Math.round(sumEst / cntEst)) : '—';
         row.push(promEst);
         body.push(row);
       });
@@ -10785,11 +10840,11 @@
       const footRow = ['', 'Promedio de la clase'];
       let sumaGen = 0; let cntGen = 0;
       materias.forEach((_, i) => {
-        const p = conteoPorMateria[i] > 0 ? (promediosPorMateria[i] / conteoPorMateria[i]).toFixed(1) : '—';
+        const p = conteoPorMateria[i] > 0 ? String(Math.round(promediosPorMateria[i] / conteoPorMateria[i])) : '—';
         footRow.push(p);
         if (p !== '—') { sumaGen += parseFloat(p); cntGen++; }
       });
-      footRow.push(cntGen > 0 ? (sumaGen / cntGen).toFixed(1) : '—');
+      footRow.push(cntGen > 0 ? String(Math.round(sumaGen / cntGen)) : '—');
       body.push(footRow);
 
       // Anchuras dinámicas
@@ -10872,7 +10927,7 @@
           celdas += `<td style="text-align:center; font-weight:bold; color:${color}; padding:5px 4px; font-size:11px; border:1px solid #DCE4E0;">${r.sinEvaluar ? '—' : fmtNum(r.notaFinal)}</td>`;
           if (!r.sinEvaluar) { promediosPorMateria[i] += r.notaFinal; conteoPorMateria[i]++; sumEst += r.notaFinal; cntEst++; }
         });
-        const promEst = cntEst > 0 ? (sumEst / cntEst).toFixed(1) : '—';
+        const promEst = cntEst > 0 ? String(Math.round(sumEst / cntEst)) : '—';
         const colorProm = promEst === '—' ? '#888' : (parseFloat(promEst) >= 61 ? '#0B3B2A' : '#D32F2F');
         const bgRow = idx % 2 === 0 ? '#fff' : '#F5F7F6';
         bodyRows += `<tr style="background:${bgRow};"><td style="text-align:center; color:#64737A; padding:5px 8px; border:1px solid #DCE4E0; font-size:11px;">${idx + 1}</td><td style="font-weight:bold; color:#06231A; padding:5px 8px; border:1px solid #DCE4E0; font-size:12px; white-space:nowrap;">${est.apellidos} <span style="font-weight:normal;">${est.nombres}</span></td>${celdas}<td style="text-align:center; font-weight:bold; color:${colorProm}; padding:5px 8px; border:1px solid #DCE4E0; font-size:13px;">${promEst}</td></tr>`;
@@ -10883,12 +10938,12 @@
       footRow += '<td colspan="2" style="padding:6px 8px; font-weight:bold; font-size:11px;">Promedio de la clase</td>';
       let sumaGen = 0; let cntGen = 0;
       materias.forEach((_, i) => {
-        const p = conteoPorMateria[i] > 0 ? (promediosPorMateria[i] / conteoPorMateria[i]).toFixed(1) : '—';
+        const p = conteoPorMateria[i] > 0 ? String(Math.round(promediosPorMateria[i] / conteoPorMateria[i])) : '—';
         const c = p !== '—' && parseFloat(p) >= 61 ? '#A5D6C0' : '#FFBABA';
         footRow += `<td style="text-align:center; font-weight:bold; color:${c}; padding:6px 4px; font-size:11px;">${p}</td>`;
         if (p !== '—') { sumaGen += parseFloat(p); cntGen++; }
       });
-      const pGen = cntGen > 0 ? (sumaGen / cntGen).toFixed(1) : '—';
+      const pGen = cntGen > 0 ? String(Math.round(sumaGen / cntGen)) : '—';
       const cGen = pGen !== '—' && parseFloat(pGen) >= 61 ? '#A5D6C0' : '#FFBABA';
       footRow += `<td style="text-align:center; font-weight:bold; color:${cGen}; padding:6px 8px; font-size:13px;">${pGen}</td></tr>`;
 
@@ -11082,7 +11137,7 @@
       });
 
       // Promedio
-      const promFinal = countMaterias > 0 ? (sumProm / countMaterias).toFixed(1) : '—';
+      const promFinal = countMaterias > 0 ? String(Math.round(sumProm / countMaterias)) : '—';
       const colorProm = promFinal === '—' ? 'var(--texto-suave)' : colorEscalaNota(parseFloat(promFinal)).texto;
 
       tfoot.innerHTML = `
