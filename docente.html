@@ -436,6 +436,23 @@
                 </div>
             </div>
             <div class="card list-panel" style="padding:0; margin-top:24px; overflow-x: auto;">
+                <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; padding:16px 16px 12px; border-bottom:1px solid var(--borde);">
+                  <div style="display:flex; flex-direction:column; gap:4px;">
+                    <label style="font-size:12px; font-weight:600; color:var(--texto-suave);">Fecha desde</label>
+                    <input type="date" id="filtroAsistDesde" class="select-css" style="padding:7px 10px; font-size:13px; width:150px;">
+                  </div>
+                  <div style="display:flex; flex-direction:column; gap:4px;">
+                    <label style="font-size:12px; font-weight:600; color:var(--texto-suave);">Fecha hasta</label>
+                    <input type="date" id="filtroAsistHasta" class="select-css" style="padding:7px 10px; font-size:13px; width:150px;">
+                  </div>
+                  <button onclick="window.renderizarTablaHistorialAsistencia()" class="btn-ingresar" style="width:auto; padding:8px 16px; margin:0; height:36px;">
+                    Aplicar filtro
+                  </button>
+                  <button onclick="document.getElementById('filtroAsistDesde').value=''; document.getElementById('filtroAsistHasta').value=''; window.renderizarTablaHistorialAsistencia();" class="btn-secundario" style="padding:8px 16px; margin:0; height:36px; font-size:13px;">
+                    Limpiar
+                  </button>
+                  <span id="lblFiltroAsistResultado" style="font-size:12px; color:var(--texto-suave); align-self:center;"></span>
+                </div>
                 <table class="materia-table" style="min-width: 880px;">
                    <thead>
                       <tr id="tablaHistorialHead"></tr>
@@ -1770,6 +1787,22 @@
 
       let fechasArray = Array.from(todasLasFechas).sort();
 
+      // Filtrar por rango de fechas
+      const filtroDesde = document.getElementById('filtroAsistDesde')?.value || '';
+      const filtroHasta = document.getElementById('filtroAsistHasta')?.value || '';
+      if (filtroDesde) fechasArray = fechasArray.filter(f => f >= filtroDesde);
+      if (filtroHasta) fechasArray = fechasArray.filter(f => f <= filtroHasta);
+
+      // Actualizar etiqueta de resultado
+      const lblResultado = document.getElementById('lblFiltroAsistResultado');
+      if (lblResultado) {
+        if (filtroDesde || filtroHasta) {
+          lblResultado.textContent = `${fechasArray.length} fecha(s) mostrada(s)`;
+        } else {
+          lblResultado.textContent = `${fechasArray.length} fecha(s) en total`;
+        }
+      }
+
       if (fechasArray.length === 0) {
         thead.innerHTML = '<tr><th>#</th><th>Estudiante</th><th>Info</th></tr>';
         tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: var(--texto-suave); padding: 32px 0;">No has tomado asistencia en ninguna fecha todavÃ­a.</td></tr>';
@@ -1992,6 +2025,11 @@
       });
       let fechasArray = Array.from(todasLasFechas).sort();
 
+      const filtroDesde = document.getElementById('filtroAsistDesde')?.value || '';
+      const filtroHasta = document.getElementById('filtroAsistHasta')?.value || '';
+      if (filtroDesde) fechasArray = fechasArray.filter(f => f >= filtroDesde);
+      if (filtroHasta) fechasArray = fechasArray.filter(f => f <= filtroHasta);
+
       const wb = new ExcelJS.Workbook();
       const ws = wb.addWorksheet('Historial Asistencia');
 
@@ -2093,6 +2131,11 @@
         Object.keys(asistObj[codigoMat] || {}).forEach(f => todasLasFechas.add(f));
       });
       let fechasArray = Array.from(todasLasFechas).sort();
+
+      const filtroDesde = document.getElementById('filtroAsistDesde')?.value || '';
+      const filtroHasta = document.getElementById('filtroAsistHasta')?.value || '';
+      if (filtroDesde) fechasArray = fechasArray.filter(f => f >= filtroDesde);
+      if (filtroHasta) fechasArray = fechasArray.filter(f => f <= filtroHasta);
 
       const logoHistPdf = await window.obtenerLogoTeslavi();
       if (logoHistPdf) doc.addImage(logoHistPdf, 'JPEG', 20, 12, 40, 40);
