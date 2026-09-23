@@ -722,21 +722,22 @@
       let calObj = {};
       try { if (est.calificaciones) calObj = typeof est.calificaciones === 'string' ? JSON.parse(est.calificaciones) : est.calificaciones; } catch (e) { }
       const n = calObj[codigo] || {};
-      const crudaOrVacio = v => (v === undefined || v === null || v === '') ? '' : Number(v);
+      const crudaOrVacio = v => (v === undefined || v === null || v === '') ? '' : Math.round(Number(v));
+      const cleanNum = v => Math.round(Number(v)) || 0;
       return {
         t1: {
-          destreza: Number(n.t1?.destreza) || 0, destreza_cruda: crudaOrVacio(n.t1?.destreza_cruda),
-          investigacion: Number(n.t1?.investigacion) || 0, investigacion_cruda: crudaOrVacio(n.t1?.investigacion_cruda),
-          practicas: Number(n.t1?.practicas) || 0, practicas_cruda: crudaOrVacio(n.t1?.practicas_cruda),
-          examen: Number(n.t1?.examen) || 0, examen_cruda: crudaOrVacio(n.t1?.examen_cruda)
+          destreza: cleanNum(n.t1?.destreza), destreza_cruda: crudaOrVacio(n.t1?.destreza_cruda),
+          investigacion: cleanNum(n.t1?.investigacion), investigacion_cruda: crudaOrVacio(n.t1?.investigacion_cruda),
+          practicas: cleanNum(n.t1?.practicas), practicas_cruda: crudaOrVacio(n.t1?.practicas_cruda),
+          examen: cleanNum(n.t1?.examen), examen_cruda: crudaOrVacio(n.t1?.examen_cruda)
         },
         t2: {
-          destreza: Number(n.t2?.destreza) || 0, destreza_cruda: crudaOrVacio(n.t2?.destreza_cruda),
-          investigacion: Number(n.t2?.investigacion) || 0, investigacion_cruda: crudaOrVacio(n.t2?.investigacion_cruda),
-          practicas: Number(n.t2?.practicas) || 0, practicas_cruda: crudaOrVacio(n.t2?.practicas_cruda),
-          examen: Number(n.t2?.examen) || 0, examen_cruda: crudaOrVacio(n.t2?.examen_cruda)
+          destreza: cleanNum(n.t2?.destreza), destreza_cruda: crudaOrVacio(n.t2?.destreza_cruda),
+          investigacion: cleanNum(n.t2?.investigacion), investigacion_cruda: crudaOrVacio(n.t2?.investigacion_cruda),
+          practicas: cleanNum(n.t2?.practicas), practicas_cruda: crudaOrVacio(n.t2?.practicas_cruda),
+          examen: cleanNum(n.t2?.examen), examen_cruda: crudaOrVacio(n.t2?.examen_cruda)
         },
-        recuperatorio: (n.recuperatorio === undefined) ? null : n.recuperatorio
+        recuperatorio: (n.recuperatorio === undefined || n.recuperatorio === null || n.recuperatorio === '') ? null : Math.round(Number(n.recuperatorio))
       };
     }
     function obtenerAsistObjMateria(est, codigo) {
@@ -751,13 +752,13 @@
         if (fecha >= fechaInicio && fecha <= fechaFin) {
           total++;
           const estadoDia = asistObjMateria[fecha].estado;
-          if (estadoDia === 'Presente' || estadoDia === 'Atrasado' || estadoDia === 'Falta Justificada') presentes++; // Atrasado y Falta Justificada valen igual que Presente Falta y Falta Justificada NO suman
+          if (estadoDia === 'Presente' || estadoDia === 'Atrasado' || estadoDia === 'Falta Justificada') presentes++;
         }
       });
       return { pts: total > 0 ? Math.round((presentes / total) * 20) : 0, presentes, total };
     }
     function subtotalTrimestre(t, ptsAsistencia) {
-      return ptsAsistencia + (Number(t?.destreza) || 0) + (Number(t?.investigacion) || 0) + (Number(t?.practicas) || 0) + (Number(t?.examen) || 0);
+      return Math.round(ptsAsistencia) + Math.round(Number(t?.destreza) || 0) + Math.round(Number(t?.investigacion) || 0) + Math.round(Number(t?.practicas) || 0) + Math.round(Number(t?.examen) || 0);
     }
     function calcularNotaMateria(est, codigo, cfgTrimestres) {
       const n = obtenerNotaObj(est, codigo);
@@ -767,10 +768,10 @@
       const a2 = ptsAsistenciaTrimestre(asistObjMateria, cfg.t2_inicio, cfg.t2_fin);
       const t1total = subtotalTrimestre(n.t1, a1.pts);
       const t2total = subtotalTrimestre(n.t2, a2.pts);
-      const semestral = (t1total + t2total) / 2;
+      const semestral = Math.round((t1total + t2total) / 2);
       const habilitaRecuperatorio = semestral >= 42 && semestral < 61;
       const rec = n.recuperatorio;
-      const notaFinal = (rec === null || rec === undefined || rec === '') ? semestral : (Number(rec) >= 61 ? 61 : Number(rec));
+      const notaFinal = (rec === null || rec === undefined || rec === '') ? semestral : (Number(rec) >= 61 ? 61 : Math.round(Number(rec)));
       const sinEvaluar = t1total === 0 && t2total === 0;
       return { n, a1, a2, t1total, t2total, semestral, habilitaRecuperatorio, notaFinal, aprobado: notaFinal >= 61, sinEvaluar };
     }
@@ -1067,7 +1068,7 @@
       const sub70_t2 = a2.pts + t2.destreza + t2.investigacion + t2.practicas;
       const t1total = subtotalTrimestre(t1, a1.pts);
       const t2total = subtotalTrimestre(t2, a2.pts);
-      const semestral = (t1total + t2total) / 2;
+      const semestral = Math.round((t1total + t2total) / 2);
       const habilita = semestral >= 42 && semestral < 61;
 
       trT1.querySelector('.subtotal70-text').textContent = fmtNum(sub70_t1);
@@ -1083,11 +1084,11 @@
       if (!habilita) {
         recInput.value = '';
       } else if (recInput.value !== '') {
-        let v = Number(recInput.value) || 0;
+        let v = Math.round(Number(recInput.value)) || 0;
         if (v > 100) { v = 100; recInput.value = 100; }
         if (v < 0) { v = 0; recInput.value = 0; }
       }
-      const recVal = (habilita && recInput.value !== '') ? Number(recInput.value) : null;
+      const recVal = (habilita && recInput.value !== '') ? Math.round(Number(recInput.value)) : null;
       const notaFinal = (recVal === null) ? semestral : (recVal >= 61 ? 61 : recVal);
       const aprobado = notaFinal >= 61;
       const sinEvaluar = t1total === 0 && t2total === 0;
@@ -1113,8 +1114,8 @@
         const trResumen = document.querySelector(`#tablaResumenBody tr[data-id="${est.id}"]`);
         if (!trT1 || !trT2 || !trResumen) return;
 
-        const getVal = (tr, tipo) => Number(tr.querySelector(`[data-tipo="${tipo}"]`)?.value) || 0;
-        const getCruda = (tr, tipo) => { const v = tr.querySelector(`[data-tipo-cruda="${tipo}"]`)?.value; return (v === '' || v === undefined) ? '' : Number(v); };
+        const getVal = (tr, tipo) => Math.round(Number(tr.querySelector(`[data-tipo="${tipo}"]`)?.value)) || 0;
+        const getCruda = (tr, tipo) => { const v = tr.querySelector(`[data-tipo-cruda="${tipo}"]`)?.value; return (v === '' || v === undefined) ? '' : Math.round(Number(v)); };
         const t1 = {
           destreza: getVal(trT1, 't1_destreza'), destreza_cruda: getCruda(trT1, 't1_destreza'),
           investigacion: getVal(trT1, 't1_investigacion'), investigacion_cruda: getCruda(trT1, 't1_investigacion'),
@@ -1128,7 +1129,7 @@
           examen: getVal(trT2, 't2_examen'), examen_cruda: getCruda(trT2, 't2_examen')
         };
         const recInput = trResumen.querySelector('.rec-input');
-        const recuperatorio = (!recInput.disabled && recInput.value !== '') ? Number(recInput.value) : null;
+        const recuperatorio = (!recInput.disabled && recInput.value !== '') ? Math.round(Number(recInput.value)) : null;
 
         let calObj = {};
         try { if (est.calificaciones) calObj = typeof est.calificaciones === 'string' ? JSON.parse(est.calificaciones) : est.calificaciones; } catch (e) { }

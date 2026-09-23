@@ -767,10 +767,22 @@
       let calObj = {};
       try { if (est.calificaciones) calObj = typeof est.calificaciones === 'string' ? JSON.parse(est.calificaciones) : est.calificaciones; } catch (e) { }
       const n = calObj[codigo] || {};
+      const crudaOrVacio = v => (v === undefined || v === null || v === '') ? '' : Math.round(Number(v));
+      const cleanNum = v => Math.round(Number(v)) || 0;
       return {
-        t1: { destreza: Number(n.t1?.destreza) || 0, investigacion: Number(n.t1?.investigacion) || 0, practicas: Number(n.t1?.practicas) || 0, examen: Number(n.t1?.examen) || 0 },
-        t2: { destreza: Number(n.t2?.destreza) || 0, investigacion: Number(n.t2?.investigacion) || 0, practicas: Number(n.t2?.practicas) || 0, examen: Number(n.t2?.examen) || 0 },
-        recuperatorio: (n.recuperatorio === undefined) ? null : n.recuperatorio
+        t1: {
+          destreza: cleanNum(n.t1?.destreza), destreza_cruda: crudaOrVacio(n.t1?.destreza_cruda),
+          investigacion: cleanNum(n.t1?.investigacion), investigacion_cruda: crudaOrVacio(n.t1?.investigacion_cruda),
+          practicas: cleanNum(n.t1?.practicas), practicas_cruda: crudaOrVacio(n.t1?.practicas_cruda),
+          examen: cleanNum(n.t1?.examen), examen_cruda: crudaOrVacio(n.t1?.examen_cruda)
+        },
+        t2: {
+          destreza: cleanNum(n.t2?.destreza), destreza_cruda: crudaOrVacio(n.t2?.destreza_cruda),
+          investigacion: cleanNum(n.t2?.investigacion), investigacion_cruda: crudaOrVacio(n.t2?.investigacion_cruda),
+          practicas: cleanNum(n.t2?.practicas), practicas_cruda: crudaOrVacio(n.t2?.practicas_cruda),
+          examen: cleanNum(n.t2?.examen), examen_cruda: crudaOrVacio(n.t2?.examen_cruda)
+        },
+        recuperatorio: (n.recuperatorio === undefined || n.recuperatorio === null || n.recuperatorio === '') ? null : Math.round(Number(n.recuperatorio))
       };
     }
     function obtenerAsistObjMateria(est, codigo) {
@@ -791,7 +803,7 @@
       return { pts: total > 0 ? Math.round((presentes / total) * 20) : 0, presentes, total };
     }
     function subtotalTrimestre(t, ptsAsistencia) {
-      return ptsAsistencia + (Number(t?.destreza) || 0) + (Number(t?.investigacion) || 0) + (Number(t?.practicas) || 0) + (Number(t?.examen) || 0);
+      return Math.round(ptsAsistencia) + Math.round(Number(t?.destreza) || 0) + Math.round(Number(t?.investigacion) || 0) + Math.round(Number(t?.practicas) || 0) + Math.round(Number(t?.examen) || 0);
     }
     function calcularNotaMateria(est, codigo, cfgTrimestres) {
       const n = obtenerNotaObj(est, codigo);
@@ -801,9 +813,9 @@
       const a2 = ptsAsistenciaTrimestre(asistObjMateria, cfg.t2_inicio, cfg.t2_fin);
       const t1total = subtotalTrimestre(n.t1, a1.pts);
       const t2total = subtotalTrimestre(n.t2, a2.pts);
-      const semestral = (t1total + t2total) / 2;
+      const semestral = Math.round((t1total + t2total) / 2);
       const rec = n.recuperatorio;
-      const notaFinal = (rec === null || rec === undefined || rec === '') ? semestral : (Number(rec) >= 61 ? 61 : Number(rec));
+      const notaFinal = (rec === null || rec === undefined || rec === '') ? semestral : (Number(rec) >= 61 ? 61 : Math.round(Number(rec)));
       const sinEvaluar = t1total === 0 && t2total === 0;
       return { n, a1, a2, t1total, t2total, semestral, notaFinal, aprobado: notaFinal >= 61, sinEvaluar };
     }
