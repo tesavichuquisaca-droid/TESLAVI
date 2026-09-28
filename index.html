@@ -11228,77 +11228,75 @@
       const pageWidth = 215.9;
       const margin = 15;
       const contentWidth = pageWidth - (margin * 2);
-      
-      // Dos libretas por hoja (mitad superior e inferior)
-      const yOffsets = [0, 139.7]; 
 
-      // Delinear separación para corte (opcional pero útil)
+      // Delinear separación para corte justo por la mitad
       doc.setDrawColor(200, 200, 200);
       doc.setLineDashPattern([2, 2], 0);
       doc.line(0, 139.7, pageWidth, 139.7);
       doc.setLineDashPattern([], 0); // Reset
 
-      for (const offsetY of yOffsets) {
-        if (logo) doc.addImage(logo, 'JPEG', margin, 10 + offsetY, 16, 16);
+      // Renderizamos la libreta solo una vez (mitad superior)
+      const offsetY = 0;
 
-        // Encabezado
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(14);
-        doc.setTextColor(6, 35, 26);
-        doc.text("INSTITUTO TECNOLÓGICO TESLAVI", pageWidth / 2, 14 + offsetY, { align: "center" });
+      if (logo) doc.addImage(logo, 'JPEG', margin, 6 + offsetY, 14, 14);
 
-        doc.setFontSize(11);
-        doc.setTextColor(20, 108, 70);
-        doc.text("LIBRETA ACADÉMICA DE CALIFICACIONES", pageWidth / 2, 20 + offsetY, { align: "center" });
+      // Encabezado más compacto
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(14);
+      doc.setTextColor(6, 35, 26);
+      doc.text("INSTITUTO TECNOLÓGICO TESLAVI", pageWidth / 2, 10 + offsetY, { align: "center" });
 
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(9);
-        doc.setTextColor(100, 100, 100);
-        doc.text("Carrera: Técnico Superior en Mecánica Automotriz", pageWidth / 2, 25 + offsetY, { align: "center" });
+      doc.setFontSize(11);
+      doc.setTextColor(20, 108, 70);
+      doc.text("LIBRETA ACADÉMICA DE CALIFICACIONES", pageWidth / 2, 15 + offsetY, { align: "center" });
 
-        // Datos Estudiante
-        doc.setDrawColor(220, 228, 224);
-        doc.setFillColor(245, 247, 246);
-        doc.roundedRect(margin, 30 + offsetY, contentWidth, 16, 2, 2, "FD");
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(100, 100, 100);
+      doc.text("Carrera: Técnico Superior en Mecánica Automotriz", pageWidth / 2, 19 + offsetY, { align: "center" });
 
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(6, 35, 26);
-        doc.text("Estudiante:", margin + 5, 36 + offsetY);
-        doc.text("C.I.:", margin + 5, 42 + offsetY);
-        doc.text("Semestre:", margin + 110, 36 + offsetY);
-        doc.text("Turno:", margin + 110, 42 + offsetY);
+      // Datos Estudiante
+      doc.setDrawColor(220, 228, 224);
+      doc.setFillColor(245, 247, 246);
+      doc.roundedRect(margin, 24 + offsetY, contentWidth, 14, 2, 2, "FD");
 
-        doc.setFont("helvetica", "normal");
-        doc.text(`${est.apellidos} ${est.nombres}`, margin + 30, 36 + offsetY);
-        doc.text(est.ci, margin + 30, 42 + offsetY);
-        doc.text(`${est.semestre}° Semestre`, margin + 132, 36 + offsetY);
-        doc.text(est.turno, margin + 132, 42 + offsetY);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(6, 35, 26);
+      doc.text("Estudiante:", margin + 5, 29 + offsetY);
+      doc.text("C.I.:", margin + 5, 34 + offsetY);
+      doc.text("Semestre:", margin + 110, 29 + offsetY);
+      doc.text("Turno:", margin + 110, 34 + offsetY);
 
-        // Tabla
-        doc.autoTable({
-          startY: 52 + offsetY,
-          head: [['Nº', 'Asignatura / Materia', 'Nota Final', 'Estado']],
-          body: bodyData,
-          theme: 'grid',
-          headStyles: { fillColor: [6, 35, 26], textColor: 255, halign: 'center' },
-          styles: { font: 'helvetica', fontSize: 9, cellPadding: 2.5, lineColor: [220, 228, 224] },
-          margin: { left: margin, right: margin }
-        });
+      doc.setFont("helvetica", "normal");
+      doc.text(`${est.apellidos} ${est.nombres}`, margin + 30, 29 + offsetY);
+      doc.text(est.ci, margin + 30, 34 + offsetY);
+      doc.text(`${est.semestre}° Semestre`, margin + 132, 29 + offsetY);
+      doc.text(est.turno, margin + 132, 34 + offsetY);
 
-        // Firmas y sellos
-        const finalY = doc.lastAutoTable.finalY + 25;
-        doc.setDrawColor(150, 150, 150);
+      // Tabla
+      doc.autoTable({
+        startY: 42 + offsetY,
+        head: [['Nº', 'Asignatura / Materia', 'Nota Final', 'Estado']],
+        body: bodyData,
+        theme: 'grid',
+        headStyles: { fillColor: [6, 35, 26], textColor: 255, halign: 'center', minCellHeight: 8 },
+        styles: { font: 'helvetica', fontSize: 9, cellPadding: 2, lineColor: [220, 228, 224] },
+        margin: { left: margin, right: margin }
+      });
 
-        doc.line(margin + 25, finalY, margin + 75, finalY);
-        doc.setFontSize(9);
-        doc.setTextColor(100, 100, 100);
-        doc.text("Firma Dirección Académica", margin + 50, finalY + 4, { align: "center" });
+      // Firmas y sellos (se aseguran de entrar antes del límite de 139.7)
+      const finalY = doc.lastAutoTable.finalY + 22;
+      doc.setDrawColor(150, 150, 150);
 
-        doc.line(margin + 115, finalY, margin + 165, finalY);
-        doc.text("Sello de la Institución", margin + 140, finalY + 4, { align: "center" });
+      doc.line(margin + 25, finalY, margin + 75, finalY);
+      doc.setFontSize(9);
+      doc.setTextColor(100, 100, 100);
+      doc.text("Firma Dirección Académica", margin + 50, finalY + 4, { align: "center" });
 
-        doc.text(`Generado el ${new Date().toLocaleString()}`, pageWidth / 2, 135 + offsetY, { align: "center", fontSize: 7 });
-      }
+      doc.line(margin + 115, finalY, margin + 165, finalY);
+      doc.text("Sello de la Institución", margin + 140, finalY + 4, { align: "center" });
+
+      doc.text(`Generado el ${new Date().toLocaleString()}`, pageWidth / 2, 135 + offsetY, { align: "center", fontSize: 7 });
 
       doc.save(`Libreta_${est.apellidos.replace(/\s+/g, '')}_${est.nombres.replace(/\s+/g, '')}_${est.semestre}Sem.pdf`);
     };
