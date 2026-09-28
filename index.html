@@ -9260,6 +9260,8 @@
       document.getElementById('tablaAdminNotasHead').innerHTML = '<tr>' + CABECERA_NOTAS.map((h, i) => {
         if (i === 6 || i === 13) return `<th style="background:#104F36; color:#FFFFFF; text-align:center;">${h}</th>`;
         if (i === 7 || i === 14) return `<th style="background:#B78103; color:#FFFFFF; text-align:center;">${h}</th>`;
+        if (i === 8 || i === 15) return `<th style="background:#0D5C75; color:#FFFFFF; text-align:center;">${h}</th>`;
+        if (i === 18) return `<th style="background:#4A154B; color:#FFFFFF; text-align:center;">${h}</th>`;
         return `<th>${h}</th>`;
       }).join('') + '</tr>';
       const tbody = document.getElementById('tablaAdminNotasBody');
@@ -9287,9 +9289,10 @@
         return `<tr>${fila.map((v, i) => {
           if (i === 1) return `<td style="font-weight:600; color:var(--verde-950); font-size:13px; text-align:left;">${v}</td>`;
           if (i === fila.length - 1) return `<td>${estadoBadgeHtml(r.sinEvaluar, r.aprobado)}</td>`;
-          if (i === fila.length - 2) return `<td style="font-weight:bold; color:${r.aprobado ? 'var(--verde-950)' : '#D32F2F'};">${v}</td>`;
           if (i === 6 || i === 13) return `<td style="font-family: var(--f-datos); font-size:12.5px; font-weight:700; background:#E8F5E9; color:#1B5E20; text-align:center;">${v}</td>`;
           if (i === 7 || i === 14) return `<td style="font-family: var(--f-datos); font-size:12.5px; font-weight:600; background:#FFF8E1; color:#785402; text-align:center;">${v}</td>`;
+          if (i === 8 || i === 15) return `<td style="font-family: var(--f-datos); font-size:12.5px; font-weight:700; background:#E0F2FE; color:#0369A1; text-align:center;">${v}</td>`;
+          if (i === 18) return `<td style="font-family: var(--f-datos); font-size:13px; font-weight:800; background:${r.aprobado ? '#E8F5E9' : '#FBEAE8'}; color:${r.aprobado ? 'var(--verde-950)' : '#D32F2F'}; text-align:center;">${v}</td>`;
           return `<td style="font-family: var(--f-datos); font-size:12.5px;">${v}</td>`;
         }).join('')}</tr>`;
       }).join('');
@@ -10169,6 +10172,10 @@
           cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF104F36' } };
         } else if (colNum === 8 || colNum === 15) {
           cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFB78103' } };
+        } else if (colNum === 9 || colNum === 16) {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0D5C75' } };
+        } else if (colNum === 19) {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4A154B' } };
         } else {
           cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF146C46' } };
         }
@@ -10188,6 +10195,15 @@
           cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF8E1' } };
           cell.font = { bold: true, color: { argb: 'FF785402' } };
         });
+        [9, 16].forEach(c => {
+          const cell = row.getCell(c);
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0F2FE' } };
+          cell.font = { bold: true, color: { argb: 'FF0369A1' } };
+        });
+        const rEst = calcularNotaMateria(est, codigoMat, window.cfgTrimestres);
+        const cellNF = row.getCell(19);
+        cellNF.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: rEst.aprobado ? 'FFE8F5E9' : 'FFFBEAE8' } };
+        cellNF.font = { bold: true, color: { argb: rEst.aprobado ? 'FF0B3B2A' : 'FFD32F2F' } };
         rowIndex++;
       });
 
@@ -10239,6 +10255,10 @@
               data.cell.styles.fillColor = [16, 79, 54];
             } else if (data.column.index === 7 || data.column.index === 14) {
               data.cell.styles.fillColor = [183, 129, 3];
+            } else if (data.column.index === 8 || data.column.index === 15) {
+              data.cell.styles.fillColor = [13, 92, 117];
+            } else if (data.column.index === 18) {
+              data.cell.styles.fillColor = [74, 21, 75];
             }
           }
           if (data.section === 'body') {
@@ -10249,6 +10269,16 @@
             } else if (data.column.index === 7 || data.column.index === 14) {
               data.cell.styles.fillColor = [255, 248, 225];
               data.cell.styles.textColor = [120, 84, 2];
+              data.cell.styles.fontStyle = 'bold';
+            } else if (data.column.index === 8 || data.column.index === 15) {
+              data.cell.styles.fillColor = [224, 242, 254];
+              data.cell.styles.textColor = [3, 105, 161];
+              data.cell.styles.fontStyle = 'bold';
+            } else if (data.column.index === 18) {
+              const val = parseFloat(data.cell.text[0]);
+              const ap = !isNaN(val) && val >= 61;
+              data.cell.styles.fillColor = ap ? [232, 245, 233] : [251, 234, 232];
+              data.cell.styles.textColor = ap ? [11, 59, 42] : [211, 47, 47];
               data.cell.styles.fontStyle = 'bold';
             }
           }
@@ -10284,14 +10314,19 @@
       html += '<table><thead><tr>' + CABECERA_NOTAS.map((h, i) => {
         if (i === 6 || i === 13) return `<th style="background-color: #104F36; color: white;">${h}</th>`;
         if (i === 7 || i === 14) return `<th style="background-color: #B78103; color: white;">${h}</th>`;
+        if (i === 8 || i === 15) return `<th style="background-color: #0D5C75; color: white;">${h}</th>`;
+        if (i === 18) return `<th style="background-color: #4A154B; color: white;">${h}</th>`;
         return `<th>${h}</th>`;
       }).join('') + '<\/tr><\/thead><tbody>';
 
       window.estudiantesAdminNotasCache.forEach((est, idx) => {
         const fila = filaNotasExport(est, idx, codigoMat, window.cfgTrimestres);
+        const rEst = calcularNotaMateria(est, codigoMat, window.cfgTrimestres);
         html += '<tr>' + fila.map((v, i) => {
           if (i === 6 || i === 13) return `<td style="background-color: #E8F5E9; color: #1B5E20; font-weight: bold;">${v}</td>`;
           if (i === 7 || i === 14) return `<td style="background-color: #FFF8E1; color: #785402; font-weight: bold;">${v}</td>`;
+          if (i === 8 || i === 15) return `<td style="background-color: #E0F2FE; color: #0369A1; font-weight: bold;">${v}</td>`;
+          if (i === 18) return `<td style="background-color: ${rEst.aprobado ? '#E8F5E9' : '#FBEAE8'}; color: ${rEst.aprobado ? '#0B3B2A' : '#D32F2F'}; font-weight: bold;">${v}</td>`;
           return `<td>${v}</td>`;
         }).join('') + '<\/tr>';
       });
