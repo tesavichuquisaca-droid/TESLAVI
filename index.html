@@ -11356,7 +11356,7 @@
     window.exportarWordLibretaIndividual = async function () {
       const est = window.libretaActual;
       const logo = await window.obtenerLogoTeslavi();
-      const logoHtml = logo ? `<img src="${logo}" style="width:60px; height:60px; border-radius:50%; display:block; margin:0 auto 8px;">` : '';
+      const logoHtml = logo ? `<img src="${logo}" width="40" height="40" style="border-radius:50%; display:block; margin:0 auto 8px;">` : '';
 
       let rows = '';
       window.libretaDetalleParaExportar.forEach(m => {
