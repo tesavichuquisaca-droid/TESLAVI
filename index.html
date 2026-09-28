@@ -11205,43 +11205,43 @@
         if (chequeo.bloqueado) { window.toast(chequeo.motivo, 'error'); return; }
       }
       const { jsPDF } = window.jspdf;
-      // Formato media carta apaisado (8.5 x 5.5 pulgadas -> 215.9 x 139.7 mm)
-      const doc = new jsPDF({ orientation: 'landscape', format: [215.9, 139.7] });
+      // Formato media carta vertical (5.5 x 8.5 pulgadas -> 139.7 x 215.9 mm)
+      const doc = new jsPDF({ orientation: 'portrait', format: [139.7, 215.9] });
       const logo = await window.obtenerLogoTeslavi();
-      if (logo) doc.addImage(logo, 'JPEG', 14, 5, 16, 16);
+      if (logo) doc.addImage(logo, 'JPEG', 10, 5, 14, 14);
 
       // Encabezado
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(14);
+      doc.setFontSize(13);
       doc.setTextColor(6, 35, 26);
-      doc.text("INSTITUTO TECNOLÓGICO TESLAVI", 108, 10, { align: "center" });
+      doc.text("INSTITUTO TECNOLÓGICO TESLAVI", 70, 10, { align: "center" });
 
-      doc.setFontSize(11);
+      doc.setFontSize(10);
       doc.setTextColor(20, 108, 70);
-      doc.text("LIBRETA ACADÉMICA DE CALIFICACIONES", 108, 16, { align: "center" });
+      doc.text("LIBRETA ACADÉMICA DE CALIFICACIONES", 70, 15, { align: "center" });
 
       doc.setFont("helvetica", "normal");
-      doc.setFontSize(9);
+      doc.setFontSize(8);
       doc.setTextColor(100, 100, 100);
-      doc.text("Carrera: Técnico Superior en Mecánica Automotriz", 108, 21, { align: "center" });
+      doc.text("Carrera: Técnico Superior en Mecánica Automotriz", 70, 20, { align: "center" });
 
       // Datos Estudiante
       doc.setDrawColor(220, 228, 224);
       doc.setFillColor(245, 247, 246);
-      doc.roundedRect(14, 25, 188, 16, 2, 2, "FD");
+      doc.roundedRect(10, 24, 119.7, 16, 2, 2, "FD");
 
       doc.setFont("helvetica", "bold");
       doc.setTextColor(6, 35, 26);
-      doc.text("Estudiante:", 18, 31);
-      doc.text("C.I.:", 18, 37);
-      doc.text("Semestre:", 115, 31);
-      doc.text("Turno:", 115, 37);
+      doc.text("Estudiante:", 12, 30);
+      doc.text("C.I.:", 12, 36);
+      doc.text("Semestre:", 75, 30);
+      doc.text("Turno:", 75, 36);
 
       doc.setFont("helvetica", "normal");
-      doc.text(`${est.apellidos} ${est.nombres}`, 40, 31);
-      doc.text(est.ci, 40, 37);
-      doc.text(`${est.semestre}° Semestre`, 135, 31);
-      doc.text(est.turno, 135, 37);
+      doc.text(`${est.apellidos} ${est.nombres}`, 30, 30);
+      doc.text(est.ci, 30, 36);
+      doc.text(`${est.semestre}° Semestre`, 92, 30);
+      doc.text(est.turno, 92, 36);
 
       // Tabla
       const bodyData = window.libretaDetalleParaExportar.map(m => {
@@ -11255,33 +11255,33 @@
 
       bodyData.push([
         { content: "PROMEDIO FINAL", colSpan: 2, styles: { halign: 'right', fontStyle: 'bold', fillColor: [245, 247, 246] } },
-        { content: window.libretaPromedioExportar, styles: { halign: 'center', fontStyle: 'bold', fontSize: 11, fillColor: [245, 247, 246] } },
+        { content: window.libretaPromedioExportar, styles: { halign: 'center', fontStyle: 'bold', fontSize: 10, fillColor: [245, 247, 246] } },
         { content: "", styles: { fillColor: [245, 247, 246] } }
       ]);
 
       doc.autoTable({
-        startY: 44,
+        startY: 43,
         head: [['Nº', 'Asignatura / Materia', 'Nota Final', 'Estado']],
         body: bodyData,
         theme: 'grid',
         headStyles: { fillColor: [6, 35, 26], textColor: 255, halign: 'center' },
-        styles: { font: 'helvetica', fontSize: 9, cellPadding: 3, lineColor: [220, 228, 224] },
-        margin: { left: 14, right: 14 }
+        styles: { font: 'helvetica', fontSize: 8, cellPadding: 2.5, lineColor: [220, 228, 224] },
+        margin: { left: 10, right: 10 }
       });
 
       // Firmas
-      const finalY = doc.lastAutoTable.finalY + 20;
+      const finalY = doc.lastAutoTable.finalY + 30;
       doc.setDrawColor(150, 150, 150);
 
-      doc.line(45, finalY, 95, finalY);
+      doc.line(15, finalY, 60, finalY);
       doc.setFontSize(8);
       doc.setTextColor(100, 100, 100);
-      doc.text("Firma Dirección Académica", 70, finalY + 4, { align: "center" });
+      doc.text("Firma Dirección Académica", 37.5, finalY + 4, { align: "center" });
 
-      doc.line(125, finalY, 175, finalY);
-      doc.text("Sello de la Institución", 150, finalY + 4, { align: "center" });
+      doc.line(80, finalY, 125, finalY);
+      doc.text("Sello de la Institución", 102.5, finalY + 4, { align: "center" });
 
-      doc.text(`Generado el ${new Date().toLocaleString()}`, 108, 135, { align: "center", fontSize: 7 });
+      doc.text(`Generado el ${new Date().toLocaleString()}`, 70, 205, { align: "center", fontSize: 7 });
 
       doc.save(`Libreta_${est.apellidos.replace(/\s+/g, '')}_${est.nombres.replace(/\s+/g, '')}_${est.semestre}Sem.pdf`);
     };
@@ -11378,7 +11378,7 @@
         <title>Libreta<\/title>
         <style>
           @page {
-            size: 8.5in 5.5in;
+            size: 5.5in 8.5in;
             margin: 0.5in;
           }
           body { font-family: Arial, sans-serif; }
@@ -11421,7 +11421,18 @@
           <\/tfoot>
         <\/table>
         
-        <p style="font-family:Arial; font-size:9px; color:#64737A; margin-top:16px; text-align:center;">Generado el ${new Date().toLocaleString()}<\/p>
+        <table style="width:100%; font-family:Arial; font-size:10px; margin-top:40px; text-align:center; color:#64737A;">
+          <tr>
+            <td style="width:50%; padding:0 20px;">
+              <div style="border-top:1px solid #999; padding-top:4px;">Firma Dirección Académica<\/div>
+            <\/td>
+            <td style="width:50%; padding:0 20px;">
+              <div style="border-top:1px solid #999; padding-top:4px;">Sello de la Institución<\/div>
+            <\/td>
+          <\/tr>
+        <\/table>
+        
+        <p style="font-family:Arial; font-size:9px; color:#64737A; margin-top:24px; text-align:center;">Generado el ${new Date().toLocaleString()}<\/p>
       <\/body><\/html>`;
 
       const blob = new Blob(['\ufeff' + html], { type: 'application/msword' });
