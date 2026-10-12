@@ -3585,7 +3585,23 @@
           <option value="efectivo">Efectivo</option>
           <option value="qr">QR</option>
           <option value="transferencia">Transferencia</option>
+          <option value="mixto">Mixto (Efectivo + QR)</option>
         </select>
+      </div>
+      <!-- Campos pago mixto -->
+      <div id="campoPagoMixto" style="display:none; background:var(--fondo); border-radius:var(--radio); padding:12px; gap:8px; flex-direction:column;">
+        <p style="margin:0 0 6px; font-size:13px; color:var(--texto-suave);">Ingresá el desglose del pago mixto:</p>
+        <div style="display:flex; gap:10px;">
+          <div style="flex:1;">
+            <label for="pagoMontoEfectivo" style="font-size:13px;">Efectivo (Bs.)</label>
+            <input type="number" min="0" step="0.01" inputmode="decimal" id="pagoMontoEfectivo" class="select-css" oninput="window.actualizarDesglosesMixto()" placeholder="0.00">
+          </div>
+          <div style="flex:1;">
+            <label for="pagoMontoQR" style="font-size:13px;">QR (Bs.)</label>
+            <input type="number" min="0" step="0.01" inputmode="decimal" id="pagoMontoQR" class="select-css" oninput="window.actualizarDesglosesMixto()" placeholder="0.00">
+          </div>
+        </div>
+        <p id="lblDesgloseTotal" style="margin:4px 0 0; font-size:12px; color:var(--texto-suave);"></p>
       </div>
       <div class="campo" id="campoPagoComprobante">
         <label for="pagoComprobante" id="lblPagoComprobante">Número de transacción o Ref:</label>
@@ -6668,6 +6684,11 @@
       document.getElementById('lblCuotaPago').textContent = `Cuota ${numeroCuota} — Saldo pendiente: ${bs(saldoCuota)}`;
       document.getElementById('pagoMonto').value = saldoCuota;
       document.getElementById('pagoMetodo').value = 'efectivo';
+      document.getElementById('pagoMontoEfectivo').value = '';
+      document.getElementById('pagoMontoQR').value = '';
+      document.getElementById('campoPagoMixto').style.display = 'none';
+      document.getElementById('campoPagoComprobante').style.display = 'none';
+      document.getElementById('lblDesgloseTotal').textContent = '';
       document.getElementById('pagoComprobante').value = '';
       document.getElementById('pagoPagadorTipo').value = 'estudiante';
       document.getElementById('pagoPagadorNombre').value = '';
@@ -6682,9 +6703,18 @@
 
     window.actualizarModalPago = function () {
       const metodo = document.getElementById('pagoMetodo').value;
+      const esMixto = metodo === 'mixto';
+
+      // Comprobante: solo si no es efectivo ni mixto
       document.getElementById('lblPagoComprobante').textContent = metodo === 'efectivo'
         ? 'N° de comprobante (opcional)'
-        : 'Número de transacción o Ref:';
+        : 'Número de transacción o Ref (QR/transferencia):';
+      document.getElementById('campoPagoComprobante').style.display = (metodo === 'efectivo' || esMixto) ? 'none' : 'block';
+
+      // Panel desglose mixto
+      const panelMixto = document.getElementById('campoPagoMixto');
+      panelMixto.style.display = esMixto ? 'flex' : 'none';
+      if (esMixto) window.actualizarDesglosesMixto();
 
       const esOtro = document.getElementById('pagoPagadorTipo').value === 'otro';
       document.getElementById('campoPagoPagadorNombre').style.display = esOtro ? 'block' : 'none';
@@ -6697,6 +6727,26 @@
         document.getElementById('lblSaldoRestantePromesa').textContent = bs(saldo - monto);
       } else {
         document.getElementById('pagoFechaPromesa').value = '';
+      }
+    };
+
+    window.actualizarDesglosesMixto = function () {
+      const monto = Number(document.getElementById('pagoMonto').value || 0);
+      const ef = Number(document.getElementById('pagoMontoEfectivo').value || 0);
+      const qr = Number(document.getElementById('pagoMontoQR').value || 0);
+      const lbl = document.getElementById('lblDesgloseTotal');
+      const suma = Math.round((ef + qr) * 100) / 100;
+      if (monto > 0 && suma !== 0) {
+        const diff = Math.round((monto - suma) * 100) / 100;
+        if (diff === 0) {
+          lbl.textContent = '✓ Desglose correcto: Bs. ' + ef.toFixed(2) + ' ef. + Bs. ' + qr.toFixed(2) + ' QR = Bs. ' + monto.toFixed(2);
+          lbl.style.color = 'var(--verde-600, #16a34a)';
+        } else {
+          lbl.textContent = 'Faltan Bs. ' + Math.abs(diff).toFixed(2) + ' (suma: Bs. ' + suma.toFixed(2) + ', total: Bs. ' + monto.toFixed(2) + ')';
+          lbl.style.color = 'var(--rojo, #dc2626)';
+        }
+      } else {
+        lbl.textContent = '';
       }
     };
 
@@ -6713,20 +6763,38 @@
       const btn = document.getElementById('btnConfirmarPago');
       const monto = Number(document.getElementById('pagoMonto').value);
       const metodo = document.getElementById('pagoMetodo').value;
+      const esMixto = metodo === 'mixto';
       const comprobante = document.getElementById('pagoComprobante').value.trim();
       const pagadorTipo = document.getElementById('pagoPagadorTipo').value;
       const pagadorNombre = document.getElementById('pagoPagadorNombre').value.trim();
       const fechaPromesa = document.getElementById('pagoFechaPromesa').value;
+
+      // Leer desglose mixto
+      const montoEfectivo = esMixto ? Number(document.getElementById('pagoMontoEfectivo').value || 0) : 0;
+      const montoQR       = esMixto ? Number(document.getElementById('pagoMontoQR').value || 0) : 0;
 
       if (!monto || monto <= 0) {
         msg.className = 'mensaje error visible';
         msg.textContent = 'Ingresá un monto válido.';
         return;
       }
-      if (metodo !== 'efectivo' && !comprobante) {
+      if (!esMixto && metodo !== 'efectivo' && !comprobante) {
         msg.className = 'mensaje error visible';
         msg.textContent = 'Para QR o Transferencia hace falta el número de transacción o Ref.';
         return;
+      }
+      if (esMixto) {
+        if (montoEfectivo <= 0 && montoQR <= 0) {
+          msg.className = 'mensaje error visible';
+          msg.textContent = 'Ingresá el desglose: cuánto es en efectivo y cuánto en QR.';
+          return;
+        }
+        const suma = Math.round((montoEfectivo + montoQR) * 100) / 100;
+        if (suma !== Math.round(monto * 100) / 100) {
+          msg.className = 'mensaje error visible';
+          msg.textContent = `El desglose (Bs. ${montoEfectivo.toFixed(2)} + Bs. ${montoQR.toFixed(2)}) no suma el monto total (Bs. ${monto.toFixed(2)}).`;
+          return;
+        }
       }
       if (pagadorTipo === 'otro' && !pagadorNombre) {
         msg.className = 'mensaje error visible';
@@ -6740,11 +6808,13 @@
           p_cuota_id: cuotaId,
           p_monto: monto,
           p_metodo_pago: metodo,
-          p_numero_comprobante_externo: comprobante || null,
+          p_numero_comprobante_externo: (!esMixto ? comprobante : null) || null,
           p_observaciones: document.getElementById('pagoObservaciones').value.trim() || null,
           p_pagador_tipo: pagadorTipo,
           p_pagador_nombre: pagadorTipo === 'otro' ? pagadorNombre : null,
-          p_fecha_prometida_saldo: fechaPromesa || null
+          p_fecha_prometida_saldo: fechaPromesa || null,
+          p_monto_efectivo: esMixto ? montoEfectivo : 0,
+          p_monto_qr: esMixto ? montoQR : 0
         });
         if (error) throw error;
 
@@ -6768,7 +6838,7 @@
     window.obtenerDatosRecibo = async function (pagoId) {
       const { data: recibo, error } = await supabaseClient
         .from('recibos')
-        .select('numero_recibo, emitido_en, pagos(monto, metodo_pago, numero_comprobante_externo, fecha_pago, saldo_anterior, saldo_actual, observaciones, estudiante_id, registrado_por, cuotas(numero_cuota, planes_pago(tipo_plan)))')
+        .select('numero_recibo, emitido_en, pagos(monto, metodo_pago, monto_efectivo, monto_qr, numero_comprobante_externo, pagador_tipo, pagador_nombre, fecha_pago, saldo_anterior, saldo_actual, observaciones, estudiante_id, registrado_por, cuotas(numero_cuota, planes_pago(tipo_plan)))')
         .eq('pago_id', pagoId)
         .single();
       if (error || !recibo) throw new Error(error ? error.message : 'Recibo no encontrado');
@@ -6809,14 +6879,25 @@
         const fecha = new Date(pago.fecha_pago);
         const planLabel = pago.cuotas?.planes_pago ? (TIPO_PLAN_LABEL[pago.cuotas.planes_pago.tipo_plan] || pago.cuotas.planes_pago.tipo_plan) : "—";
 
+        // Construir desglose de método de pago
+        const esMixtoRecibo = pago.metodo_pago === 'mixto';
+        const metodoLabel = esMixtoRecibo
+          ? `Mixto (Ef: ${bs(pago.monto_efectivo || 0)} / QR: ${bs(pago.monto_qr || 0)})`
+          : (pago.metodo_pago.charAt(0).toUpperCase() + pago.metodo_pago.slice(1));
+
+        // Determinar quién pagó
+        const quienPago = pago.pagador_tipo === 'otro' && pago.pagador_nombre
+          ? pago.pagador_nombre
+          : `${estudiante.apellidos} ${estudiante.nombres}` + ' (alumno)';
+
         const filas = [
           ["Alumno:", `${estudiante.apellidos} ${estudiante.nombres}`],
           ["CI:", estudiante.ci],
           ["Plan:", planLabel],
           ["Cuota:", pago.cuotas ? `Cuota ${pago.cuotas.numero_cuota}` : "—"],
           ["Fecha:", fecha.toLocaleDateString('es-BO') + " " + fecha.toLocaleTimeString('es-BO')],
-          ["Método:", pago.metodo_pago.charAt(0).toUpperCase() + pago.metodo_pago.slice(1)],
-          ["Comprobante:", pago.numero_comprobante_externo || "—"],
+          ["Pagó:", quienPago],
+          ["Método:", metodoLabel],
           ["Monto pagado:", bs(pago.monto)],
           ["Saldo anterior:", bs(pago.saldo_anterior)],
           ["Saldo actual:", bs(pago.saldo_actual)],
@@ -7684,7 +7765,7 @@
       // Traer pagos con detalle de estudiante y cuota
       const { data: pagos, error } = await supabaseClient
         .from('pagos')
-        .select('id, monto, metodo_pago, fecha_pago, registrado_por, numero_comprobante_externo, anulado, estudiante_id, pagador_tipo, pagador_nombre, cuotas(numero_cuota, planes_pago(tipo_plan)), estudiantes(nombres, apellidos, ci, semestre, turno, estado_financiero)')
+        .select('id, monto, metodo_pago, monto_efectivo, monto_qr, fecha_pago, registrado_por, numero_comprobante_externo, anulado, estudiante_id, pagador_tipo, pagador_nombre, cuotas(numero_cuota, planes_pago(tipo_plan)), estudiantes(nombres, apellidos, ci, semestre, turno, estado_financiero)')
         .gte('fecha_pago', desde)
         .lte('fecha_pago', hasta + 'T23:59:59')
         .eq('anulado', false)
@@ -7699,19 +7780,24 @@
       const userMap = new Map((usuarios || []).map(u => [u.id, u.name]));
 
       let totalEfectivo = 0;
-      let totalTransferencia = 0;
       let totalQR = 0;
       const totalGeneral = pagos.reduce((s, p) => {
         const m = Number(p.monto || 0);
         const met = (p.metodo_pago || '').toLowerCase().trim();
         if (met === 'efectivo') totalEfectivo += m;
-        else if (met === 'transferencia') totalTransferencia += m;
         else if (met === 'qr') totalQR += m;
+        else if (met === 'mixto') {
+          totalEfectivo += Number(p.monto_efectivo || 0);
+          totalQR += Number(p.monto_qr || 0);
+        }
         return s + m;
       }, 0);
 
       const porMetodo = {};
-      pagos.forEach(p => { porMetodo[p.metodo_pago] = (porMetodo[p.metodo_pago] || 0) + Number(p.monto); });
+      pagos.forEach(p => {
+        const label = p.metodo_pago === 'mixto' ? 'Efec - QR' : (p.metodo_pago || '-');
+        porMetodo[label] = (porMetodo[label] || 0) + Number(p.monto);
+      });
       const porUsuario = {};
       pagos.forEach(p => {
         const nombre = userMap.get(p.registrado_por) || 'Desconocido';
@@ -7719,7 +7805,7 @@
       });
 
       // Guardar en cache para exportar
-      window.reporteFinancieroCache = { pagos, porMetodo, porUsuario, totalGeneral, totalEfectivo, totalTransferencia, totalQR, desde, hasta, userMap };
+      window.reporteFinancieroCache = { pagos, porMetodo, porUsuario, totalGeneral, totalEfectivo, totalQR, desde, hasta, userMap };
 
       // ── Agrupar por Semestre → Turno, filas ordenadas por fecha ──
       const grupos = new Map();
@@ -7747,38 +7833,30 @@
         const turnoLabel = partes[2];
         gpagos.sort((a, b) => new Date(a.fecha_pago) - new Date(b.fecha_pago));
 
-        let gEf = 0, gTr = 0, gQR = 0, gTotal = 0;
+        let gEf = 0, gQR = 0, gTotal = 0;
         let filas = '';
 
         gpagos.forEach(p => {
           numGlobal++;
-          const cajera = userMap.get(p.registrado_por) || 'Desconocido';
           const est = p.estudiantes || {};
-          const cuotaTexto = p.cuotas?.numero_cuota ? `Cuota ${p.cuotas.numero_cuota}` : '-';
-          const estadoTexto = est.estado_financiero || 'PAGADO';
           const fecha = new Date(p.fecha_pago).toLocaleDateString('es-BO') + ' ' + new Date(p.fecha_pago).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' });
           const met = (p.metodo_pago || '').toLowerCase().trim();
-          const mEf = met === 'efectivo' ? Number(p.monto) : 0;
-          const mTr = met === 'transferencia' ? Number(p.monto) : 0;
-          const mQr = met === 'qr' ? Number(p.monto) : 0;
-          gEf += mEf; gTr += mTr; gQR += mQr; gTotal += Number(p.monto);
+          const esMixto = met === 'mixto';
+          const metLabel = esMixto ? 'Efec - QR' : (p.metodo_pago || '-');
+          const mEf = esMixto ? Number(p.monto_efectivo || 0) : (met === 'efectivo' ? Number(p.monto) : 0);
+          const mQr = esMixto ? Number(p.monto_qr || 0) : (met === 'qr' ? Number(p.monto) : 0);
+          gEf += mEf; gQR += mQr; gTotal += Number(p.monto);
           const comprobante = p.numero_comprobante_externo || '-';
-          const pagadoPor = p.pagador_tipo === 'otro' ? (p.pagador_nombre || 'Otro') : 'Propio';
+          const pagadoPor = p.pagador_tipo === 'otro' ? (p.pagador_nombre || 'Otro') : `${est.apellidos || ''} ${est.nombres || ''}`.trim();
 
           filas += `<tr>
             <td style="text-align:center;">${numGlobal}</td>
-            <td style="text-align:center;">${comprobante}</td>
-            <td>${est.apellidos || ''} ${est.nombres || ''}</td>
-            <td>${est.ci || ''}</td>
-            <td style="text-align:center;">${est.semestre ?? '-'}</td>
-            <td style="text-align:center;">${cuotaTexto}</td>
-            <td style="text-align:center;">${badgeHtml(ESTADO_FINANCIERO_BADGE, estadoTexto)}</td>
-            <td>${cajera}</td>
-            <td style="text-transform:capitalize;">${p.metodo_pago}</td>
             <td>${fecha}</td>
             <td>${pagadoPor}</td>
+            <td>${est.apellidos || ''} ${est.nombres || ''}</td>
+            <td style="text-transform:capitalize;">${metLabel}</td>
+            <td>${comprobante}</td>
             <td style="text-align:right;">${mEf ? bs(mEf) : '-'}</td>
-            <td style="text-align:right;">${mTr ? bs(mTr) : '-'}</td>
             <td style="text-align:right;">${mQr ? bs(mQr) : '-'}</td>
             <td style="text-align:right;font-weight:600;color:var(--verde-800);">${bs(p.monto)}</td>
           </tr>`;
@@ -7791,29 +7869,21 @@
               <p style="margin:4px 0 0;font-size:13px;color:var(--verde-700);">${gpagos.length} pago${gpagos.length !== 1 ? 's' : ''} · Total: <strong>${bs(gTotal)}</strong></p>
             </div>
             <div class="form-section-body" style="padding:0;overflow-x:auto;">
-              <table class="materia-table" style="width:100%;min-width:1100px;">
-                <thead>
-                  <tr>
-                    <th>#</th><th>Nro. Comp.</th><th>Estudiante</th><th>CI</th>
-                    <th style="text-align:center;">Sem.</th><th style="text-align:center;">Cuota</th>
-                    <th style="text-align:center;">Estado</th><th>Cajera</th><th>Método</th>
-                    <th>Fecha y Hora</th><th>Pagado Por</th>
-                    <th style="text-align:right;">Efectivo (Bs)</th>
-                    <th style="text-align:right;">Transferencia (Bs)</th>
-                    <th style="text-align:right;">QR (Bs)</th>
-                    <th style="text-align:right;">Monto Total</th>
-                  </tr>
-                </thead>
+              <table class="materia-table" style="width:100%;min-width:750px;">
+                <thead><tr>
+                  <th>#</th><th>Fecha</th><th>Pagador</th><th>Estudiante</th>
+                  <th>Método</th><th>Comprobante</th>
+                  <th style="text-align:right;">Efec. (Bs)</th>
+                  <th style="text-align:right;">QR (Bs)</th>
+                  <th style="text-align:right;">Total (Bs)</th>
+                </tr></thead>
                 <tbody>${filas}</tbody>
-                <tfoot>
-                  <tr style="background:#f0faf3;">
-                    <td colspan="11" style="text-align:right;font-weight:700;padding:8px;">Subtotal ${semLabel} / Turno ${turnoLabel}:</td>
-                    <td style="text-align:right;font-weight:700;padding:8px;">${gEf ? bs(gEf) : '-'}</td>
-                    <td style="text-align:right;font-weight:700;padding:8px;">${gTr ? bs(gTr) : '-'}</td>
-                    <td style="text-align:right;font-weight:700;padding:8px;">${gQR ? bs(gQR) : '-'}</td>
-                    <td style="text-align:right;font-weight:700;padding:8px;color:var(--verde-800);">${bs(gTotal)}</td>
-                  </tr>
-                </tfoot>
+                <tfoot><tr style="background:#f0faf3;">
+                  <td colspan="6" style="text-align:right;font-weight:700;padding:8px;">Subtotal ${semLabel} / ${turnoLabel}:</td>
+                  <td style="text-align:right;font-weight:700;padding:8px;">${gEf ? bs(gEf) : '-'}</td>
+                  <td style="text-align:right;font-weight:700;padding:8px;">${gQR ? bs(gQR) : '-'}</td>
+                  <td style="text-align:right;font-weight:700;padding:8px;color:var(--verde-800);">${bs(gTotal)}</td>
+                </tr></tfoot>
               </table>
             </div>
           </div>`;
@@ -7826,7 +7896,6 @@
             <span style="font-size:16px;font-weight:700;">TOTAL GENERAL (${pagos.length} pagos)</span>
             <span style="display:flex;gap:24px;flex-wrap:wrap;">
               <span>Efectivo: <strong>${bs(totalEfectivo)}</strong></span>
-              <span>Transf.: <strong>${bs(totalTransferencia)}</strong></span>
               <span>QR: <strong>${bs(totalQR)}</strong></span>
               <span style="font-size:18px;color:#7dffb3;">Total: <strong>${bs(totalGeneral)}</strong></span>
             </span>
@@ -7946,7 +8015,7 @@
       doc.setTextColor(11, 59, 42); doc.setFontSize(12);
       doc.text('REPORTE FINANCIERO', 148.5, 28, { align: 'center' });
       doc.setFontSize(8.5); doc.setTextColor(0, 0, 0); doc.setFont('helvetica', 'normal');
-      doc.text(`Período: ${c.desde} al ${c.hasta}   |   Efectivo: ${bs(c.totalEfectivo || 0)}   |   Transferencia: ${bs(c.totalTransferencia || 0)}   |   QR: ${bs(c.totalQR || 0)}   |   Total: ${bs(c.totalGeneral)}   |   Generado: ${fechaHoy}`, 148.5, 35, { align: 'center' });
+      doc.text(`Período: ${c.desde} al ${c.hasta}   |   Efectivo: ${bs(c.totalEfectivo || 0)}   |   QR: ${bs(c.totalQR || 0)}   |   Total: ${bs(c.totalGeneral)}   |   Generado: ${fechaHoy}`, 148.5, 35, { align: 'center' });
 
       // Tabla resumen por cajera
       doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5);
@@ -7993,7 +8062,7 @@
         const turnoLabel = partes[2];
         gpagos.sort((a, b) => new Date(a.fecha_pago) - new Date(b.fecha_pago));
 
-        let gEfT = 0, gTrT = 0, gQRT = 0, gTotalT = 0;
+        let gEfT = 0, gQRT = 0, gTotalT = 0;
 
         nextY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 10 : 43;
         if (nextY > 175) { doc.addPage('a4', 'landscape'); nextY = 15; }
@@ -8004,33 +8073,40 @@
 
         const bodyGrupo = gpagos.map(p => {
           numPDF++;
-          const cajera = c.userMap.get(p.registrado_por) || 'Desc.';
           const est = p.estudiantes || {};
-          const fecha = new Date(p.fecha_pago).toLocaleDateString('es-BO');
-          const cuota = p.cuotas?.numero_cuota ? `C${p.cuotas.numero_cuota}` : '-';
-          const estado = est.estado_financiero || 'PAGADO';
+          const fecha = new Date(p.fecha_pago).toLocaleDateString('es-BO') + ' ' + new Date(p.fecha_pago).toLocaleTimeString('es-BO', { hour:'2-digit', minute:'2-digit' });
           const met = (p.metodo_pago || '').toLowerCase().trim();
-          const mEf = met === 'efectivo' ? bs(p.monto) : '-';
-          const mTr = met === 'transferencia' ? bs(p.monto) : '-';
-          const mQr = met === 'qr' ? bs(p.monto) : '-';
-          if (met === 'efectivo') gEfT += Number(p.monto);
-          if (met === 'transferencia') gTrT += Number(p.monto);
-          if (met === 'qr') gQRT += Number(p.monto);
+          const esMixto = met === 'mixto';
+          const metLabel = esMixto ? 'Efec - QR' : (p.metodo_pago || '-');
+          const mEf = esMixto ? Number(p.monto_efectivo || 0) : (met === 'efectivo' ? Number(p.monto) : 0);
+          const mQr = esMixto ? Number(p.monto_qr || 0) : (met === 'qr' ? Number(p.monto) : 0);
+          if (mEf) gEfT += mEf;
+          if (mQr) gQRT += mQr;
           gTotalT += Number(p.monto);
           const comp = p.numero_comprobante_externo || '-';
-          const pagadoPor = p.pagador_tipo === 'otro' ? (p.pagador_nombre || 'Otro') : 'Propio';
-          return [numPDF, comp, `${est.apellidos || ''} ${est.nombres || ''}`.trim(), est.ci || '', est.semestre ?? '-', cuota, estado, cajera, p.metodo_pago, fecha, pagadoPor, mEf, mTr, mQr, bs(p.monto)];
+          const pagadoPor = p.pagador_tipo === 'otro' ? (p.pagador_nombre || 'Otro') : `${est.apellidos || ''} ${est.nombres || ''}`.trim();
+          return [numPDF, fecha, pagadoPor, `${est.apellidos || ''} ${est.nombres || ''}`.trim(), metLabel, comp, mEf ? bs(mEf) : '-', mQr ? bs(mQr) : '-', bs(p.monto)];
         });
 
         doc.autoTable({
           startY: nextY + 3,
-          head: [['#', 'Comp.', 'Estudiante', 'CI', 'Sem.', 'Cuota', 'Estado', 'Cajera', 'Metodo', 'Fecha', 'Pagador', 'Efec.', 'Trans.', 'QR', 'Total']],
+          head: [['#', 'Fecha', 'Pagador', 'Estudiante', 'Método', 'Comprobante', 'Efec.', 'QR', 'Total']],
           body: bodyGrupo,
-          foot: [['', '', '', '', '', '', '', '', '', '', `Subtotal (${gpagos.length})`, gEfT ? bs(gEfT) : '-', gTrT ? bs(gTrT) : '-', gQRT ? bs(gQRT) : '-', bs(gTotalT)]],
+          foot: [['', '', '', '', '', `Subtotal (${gpagos.length})`, gEfT ? bs(gEfT) : '-', gQRT ? bs(gQRT) : '-', bs(gTotalT)]],
           headStyles: { fillColor: [20, 108, 70], textColor: [255, 255, 255], fontSize: 7 },
           footStyles: { fillColor: [208, 235, 218], fontStyle: 'bold', fontSize: 7 },
           styles: { fontSize: 7, cellPadding: 1.5 },
-          columnStyles: { 0: { cellWidth: 7 }, 11: { halign: 'right' }, 12: { halign: 'right' }, 13: { halign: 'right' }, 14: { halign: 'right', fontStyle: 'bold' } },
+          columnStyles: {
+            0: { cellWidth: 8 },
+            1: { cellWidth: 28 },
+            2: { cellWidth: 35 },
+            3: { cellWidth: 40 },
+            4: { cellWidth: 18 },
+            5: { cellWidth: 22 },
+            6: { halign: 'right', cellWidth: 18 },
+            7: { halign: 'right', cellWidth: 18 },
+            8: { halign: 'right', fontStyle: 'bold', cellWidth: 18 }
+          },
           alternateRowStyles: { fillColor: [240, 245, 242] }
         });
       });
@@ -8040,7 +8116,7 @@
       if (nextY > 185) { doc.addPage('a4', 'landscape'); nextY = 15; }
       doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5);
       doc.setTextColor(6, 35, 26);
-      doc.text(`TOTAL GENERAL: ${bs(c.totalGeneral)}   (Efectivo: ${bs(c.totalEfectivo||0)}  Transf.: ${bs(c.totalTransferencia||0)}  QR: ${bs(c.totalQR||0)})`, 14, nextY);
+      doc.text(`TOTAL GENERAL: ${bs(c.totalGeneral)}   (Efectivo: ${bs(c.totalEfectivo||0)}  QR: ${bs(c.totalQR||0)})`, 14, nextY);
       doc.setTextColor(0, 0, 0);
 
       // Morosidad
@@ -8073,14 +8149,17 @@
 
       // Hoja 1: Detalle de pagos agrupado por Semestre y Turno
       const ws1 = wb.addWorksheet('Pagos Recibidos');
-      const NCOLS = 15;
+      const NCOLS = 9;
       ws1.columns = [
-        { key: 'num', width: 6 }, { key: 'comp', width: 12 }, { key: 'estudiante', width: 35 },
-        { key: 'ci', width: 13 }, { key: 'semestre', width: 10 }, { key: 'cuota', width: 10 },
-        { key: 'estado', width: 12 }, { key: 'cajera', width: 20 }, { key: 'metodo', width: 12 },
-        { key: 'fecha', width: 18 }, { key: 'pagador', width: 22 },
-        { key: 'efectivo', width: 14 }, { key: 'transferencia', width: 16 },
-        { key: 'qr', width: 12 }, { key: 'monto_total', width: 15 }
+        { key: 'num',        width: 6  },
+        { key: 'fecha',      width: 22 },
+        { key: 'pagador',    width: 28 },
+        { key: 'estudiante', width: 32 },
+        { key: 'metodo',     width: 14 },
+        { key: 'comp',       width: 16 },
+        { key: 'efectivo',   width: 14 },
+        { key: 'qr',         width: 14 },
+        { key: 'total',      width: 15 }
       ];
 
       // Fila 1: título general
@@ -8091,8 +8170,8 @@
       titCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF06231A' } };
       titCell.alignment = { horizontal: 'center' };
 
-      // Cabecera de columnas (fija, fila 2)
-      const hdrCols = ['#', 'Nro. Comp.', 'Estudiante', 'CI', 'Semestre', 'Cuota', 'Estado', 'Cajera', 'Metodo', 'Fecha y Hora', 'Pagado Por', 'Efectivo (Bs)', 'Transferencia (Bs)', 'QR (Bs)', 'Monto Total (Bs)'];
+      // Cabecera de columnas (fila 2)
+      const hdrCols = ['#', 'Fecha', 'Pagador', 'Estudiante', 'Método', 'Comprobante', 'Efec. (Bs)', 'QR (Bs)', 'Total (Bs)'];
       const hdrRow = ws1.getRow(2);
       hdrRow.values = hdrCols;
       hdrRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
@@ -8125,46 +8204,52 @@
         gHdrRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD4EDDA' } };
         gHdrRow.height = 18;
 
-        let gEf = 0, gTr = 0, gQr = 0, gTotal = 0;
+        let gEf = 0, gQr = 0, gTotal = 0;
 
         gpagos.forEach(p => {
           numXls++;
-          const cajera = c.userMap.get(p.registrado_por) || 'Desconocido';
           const est = p.estudiantes || {};
           const fecha = new Date(p.fecha_pago).toLocaleString('es-BO');
-          const cuota = p.cuotas?.numero_cuota ? `Cuota ${p.cuotas.numero_cuota}` : '-';
-          const estado = est.estado_financiero || 'PAGADO';
           const met = (p.metodo_pago || '').toLowerCase().trim();
-          const ef = met === 'efectivo' ? Number(p.monto) : 0;
-          const tr = met === 'transferencia' ? Number(p.monto) : 0;
-          const qr = met === 'qr' ? Number(p.monto) : 0;
-          gEf += ef; gTr += tr; gQr += qr; gTotal += Number(p.monto);
+          const esMixto = met === 'mixto';
+          const metLabel = esMixto ? 'Efec - QR' : (p.metodo_pago || '-');
+          const ef = esMixto ? Number(p.monto_efectivo || 0) : (met === 'efectivo' ? Number(p.monto) : 0);
+          const qr = esMixto ? Number(p.monto_qr || 0) : (met === 'qr' ? Number(p.monto) : 0);
+          gEf += ef; gQr += qr; gTotal += Number(p.monto);
           const comp = p.numero_comprobante_externo || '-';
-          const pagadoPor = p.pagador_tipo === 'otro' ? (p.pagador_nombre || 'Otro') : 'Propio';
+          const pagadoPor = p.pagador_tipo === 'otro' ? (p.pagador_nombre || 'Otro') : `${est.apellidos || ''} ${est.nombres || ''}`.trim();
 
-          ws1.addRow([
-            numXls, comp,
+          const dataRow = ws1.addRow([
+            numXls, fecha, pagadoPor,
             `${est.apellidos || ''} ${est.nombres || ''}`.trim(),
-            est.ci || '', est.semestre ?? '-', cuota, estado,
-            cajera, p.metodo_pago, fecha, pagadoPor,
-            ef, tr, qr, Number(p.monto)
+            metLabel, comp,
+            ef || null, qr || null, Number(p.monto)
           ]);
+          [7, 8, 9].forEach(col => {
+            dataRow.getCell(col).alignment = { horizontal: 'right' };
+            dataRow.getCell(col).numFmt = '#,##0.00';
+          });
         });
 
         // Fila subtotal del grupo
-        const subRow = ws1.addRow(['', '', '', '', '', '', '', '', '', '', `Subtotal ${semLabel} / Turno ${turnoLabel}`, gEf || 0, gTr || 0, gQr || 0, gTotal]);
+        const subRow = ws1.addRow(['', '', '', '', '', `Subtotal ${semLabel} / ${turnoLabel}`, gEf || null, gQr || null, gTotal]);
         subRow.font = { bold: true };
-        [12, 13, 14, 15].forEach(ci => {
-          subRow.getCell(ci).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD0EBD9' } };
+        [7, 8, 9].forEach(col => {
+          subRow.getCell(col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD0EBD9' } };
+          subRow.getCell(col).alignment = { horizontal: 'right' };
+          subRow.getCell(col).numFmt = '#,##0.00';
         });
-        // Fila vacía entre grupos
         ws1.addRow([]);
       });
 
       // Fila total general
-      const totalRow = ws1.addRow(['', '', '', '', '', '', '', '', '', '', 'TOTAL GENERAL', c.totalEfectivo || 0, c.totalTransferencia || 0, c.totalQR || 0, c.totalGeneral]);
+      const totalRow = ws1.addRow(['', '', '', '', '', 'TOTAL GENERAL', c.totalEfectivo || 0, c.totalQR || 0, c.totalGeneral]);
       totalRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
       totalRow.eachCell(cell => { cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF06231A' } }; });
+      [7, 8, 9].forEach(col => {
+        totalRow.getCell(col).alignment = { horizontal: 'right' };
+        totalRow.getCell(col).numFmt = '#,##0.00';
+      });
       totalRow.height = 18;
 
       // Hoja 2: Resumen
