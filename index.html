@@ -7765,7 +7765,7 @@
       // Traer pagos con detalle de estudiante y cuota
       const { data: pagos, error } = await supabaseClient
         .from('pagos')
-        .select('id, monto, metodo_pago, monto_efectivo, monto_qr, fecha_pago, registrado_por, numero_comprobante_externo, anulado, estudiante_id, pagador_tipo, pagador_nombre, cuotas(numero_cuota, planes_pago(tipo_plan)), estudiantes(nombres, apellidos, ci, semestre, turno, estado_financiero)')
+        .select('id, monto, metodo_pago, monto_efectivo, monto_qr, fecha_pago, registrado_por, numero_comprobante_externo, anulado, estudiante_id, pagador_tipo, pagador_nombre, recibos(numero_recibo), cuotas(numero_cuota, planes_pago(tipo_plan)), estudiantes(nombres, apellidos, ci, semestre, turno, estado_financiero)')
         .gte('fecha_pago', desde)
         .lte('fecha_pago', hasta + 'T23:59:59')
         .eq('anulado', false)
@@ -7849,8 +7849,11 @@
           const comprobante = p.numero_comprobante_externo || '-';
           const pagadoPor = p.pagador_tipo === 'otro' ? (p.pagador_nombre || 'Otro') : `${est.apellidos || ''} ${est.nombres || ''}`.trim();
 
+          const nroRecibo = p.recibos?.numero_recibo ? String(p.recibos.numero_recibo).padStart(6, '0') : '-';
+
           filas += `<tr>
             <td style="text-align:center;">${numGlobal}</td>
+            <td style="text-align:center;font-family:var(--f-datos,monospace);font-weight:600;">${nroRecibo}</td>
             <td>${fecha}</td>
             <td>${pagadoPor}</td>
             <td>${est.apellidos || ''} ${est.nombres || ''}</td>
@@ -7869,9 +7872,9 @@
               <p style="margin:4px 0 0;font-size:13px;color:var(--verde-700);">${gpagos.length} pago${gpagos.length !== 1 ? 's' : ''} · Total: <strong>${bs(gTotal)}</strong></p>
             </div>
             <div class="form-section-body" style="padding:0;overflow-x:auto;">
-              <table class="materia-table" style="width:100%;min-width:750px;">
+              <table class="materia-table" style="width:100%;min-width:850px;">
                 <thead><tr>
-                  <th>#</th><th>Fecha</th><th>Pagador</th><th>Estudiante</th>
+                  <th>#</th><th>N° Recibo</th><th>Fecha</th><th>Pagador</th><th>Estudiante</th>
                   <th>Método</th><th>Comprobante</th>
                   <th style="text-align:right;">Efec. (Bs)</th>
                   <th style="text-align:right;">QR (Bs)</th>
@@ -7879,7 +7882,7 @@
                 </tr></thead>
                 <tbody>${filas}</tbody>
                 <tfoot><tr style="background:#f0faf3;">
-                  <td colspan="6" style="text-align:right;font-weight:700;padding:8px;">Subtotal ${semLabel} / ${turnoLabel}:</td>
+                  <td colspan="7" style="text-align:right;font-weight:700;padding:8px;">Subtotal ${semLabel} / ${turnoLabel}:</td>
                   <td style="text-align:right;font-weight:700;padding:8px;">${gEf ? bs(gEf) : '-'}</td>
                   <td style="text-align:right;font-weight:700;padding:8px;">${gQR ? bs(gQR) : '-'}</td>
                   <td style="text-align:right;font-weight:700;padding:8px;color:var(--verde-800);">${bs(gTotal)}</td>
@@ -8085,27 +8088,29 @@
           gTotalT += Number(p.monto);
           const comp = p.numero_comprobante_externo || '-';
           const pagadoPor = p.pagador_tipo === 'otro' ? (p.pagador_nombre || 'Otro') : `${est.apellidos || ''} ${est.nombres || ''}`.trim();
-          return [numPDF, fecha, pagadoPor, `${est.apellidos || ''} ${est.nombres || ''}`.trim(), metLabel, comp, mEf ? bs(mEf) : '-', mQr ? bs(mQr) : '-', bs(p.monto)];
+          const nroReciboPDF = p.recibos?.numero_recibo ? String(p.recibos.numero_recibo).padStart(6, '0') : '-';
+          return [numPDF, nroReciboPDF, fecha, pagadoPor, `${est.apellidos || ''} ${est.nombres || ''}`.trim(), metLabel, comp, mEf ? bs(mEf) : '-', mQr ? bs(mQr) : '-', bs(p.monto)];
         });
 
         doc.autoTable({
           startY: nextY + 3,
-          head: [['#', 'Fecha', 'Pagador', 'Estudiante', 'Método', 'Comprobante', 'Efec.', 'QR', 'Total']],
+          head: [['#', 'N° Recibo', 'Fecha', 'Pagador', 'Estudiante', 'Método', 'Comprobante', 'Efec.', 'QR', 'Total']],
           body: bodyGrupo,
-          foot: [['', '', '', '', '', `Subtotal (${gpagos.length})`, gEfT ? bs(gEfT) : '-', gQRT ? bs(gQRT) : '-', bs(gTotalT)]],
+          foot: [['', '', '', '', '', '', `Subtotal (${gpagos.length})`, gEfT ? bs(gEfT) : '-', gQRT ? bs(gQRT) : '-', bs(gTotalT)]],
           headStyles: { fillColor: [20, 108, 70], textColor: [255, 255, 255], fontSize: 7 },
           footStyles: { fillColor: [208, 235, 218], fontStyle: 'bold', fontSize: 7 },
-          styles: { fontSize: 7, cellPadding: 1.5 },
+          styles: { fontSize: 6.5, cellPadding: 1.5 },
           columnStyles: {
-            0: { cellWidth: 8 },
-            1: { cellWidth: 28 },
-            2: { cellWidth: 35 },
-            3: { cellWidth: 40 },
-            4: { cellWidth: 18 },
-            5: { cellWidth: 22 },
-            6: { halign: 'right', cellWidth: 18 },
-            7: { halign: 'right', cellWidth: 18 },
-            8: { halign: 'right', fontStyle: 'bold', cellWidth: 18 }
+            0: { cellWidth: 7 },
+            1: { cellWidth: 14, halign: 'center' },
+            2: { cellWidth: 24 },
+            3: { cellWidth: 30 },
+            4: { cellWidth: 35 },
+            5: { cellWidth: 16 },
+            6: { cellWidth: 20 },
+            7: { halign: 'right', cellWidth: 16 },
+            8: { halign: 'right', cellWidth: 16 },
+            9: { halign: 'right', fontStyle: 'bold', cellWidth: 16 }
           },
           alternateRowStyles: { fillColor: [240, 245, 242] }
         });
@@ -8149,17 +8154,18 @@
 
       // Hoja 1: Detalle de pagos agrupado por Semestre y Turno
       const ws1 = wb.addWorksheet('Pagos Recibidos');
-      const NCOLS = 9;
+      const NCOLS = 10;
       ws1.columns = [
         { key: 'num',        width: 6  },
+        { key: 'recibo',     width: 14 },
         { key: 'fecha',      width: 22 },
         { key: 'pagador',    width: 28 },
         { key: 'estudiante', width: 32 },
-        { key: 'metodo',     width: 14 },
-        { key: 'comp',       width: 16 },
+        { key: 'metodo',     width: 15 },
+        { key: 'comp',       width: 18 },
         { key: 'efectivo',   width: 14 },
         { key: 'qr',         width: 14 },
-        { key: 'total',      width: 15 }
+        { key: 'total',      width: 16 }
       ];
 
       // Fila 1: título general
@@ -8168,14 +8174,21 @@
       titCell.value = `INSTITUTO TECNOLOGICO TESLAVI — REPORTE FINANCIERO ${c.desde} al ${c.hasta} — Generado: ${fechaHoy}`;
       titCell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 12 };
       titCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF06231A' } };
-      titCell.alignment = { horizontal: 'center' };
+      titCell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+      ws1.getRow(1).height = 26;
 
       // Cabecera de columnas (fila 2)
-      const hdrCols = ['#', 'Fecha', 'Pagador', 'Estudiante', 'Método', 'Comprobante', 'Efec. (Bs)', 'QR (Bs)', 'Total (Bs)'];
+      const hdrCols = ['#', 'N° Recibo', 'Fecha', 'Pagador', 'Estudiante', 'Método', 'Comprobante', 'Efec. (Bs)', 'QR (Bs)', 'Total (Bs)'];
       const hdrRow = ws1.getRow(2);
       hdrRow.values = hdrCols;
       hdrRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-      hdrRow.eachCell(cell => { cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF146C46' } }; });
+      hdrRow.height = 22;
+      hdrRow.eachCell(cell => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF146C46' } };
+        cell.alignment = { vertical: 'middle', wrapText: true };
+      });
+      hdrRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+      hdrRow.getCell(2).alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
 
       // Agrupar igual que el HTML
       const gXls = new Map();
@@ -8202,7 +8215,8 @@
         ws1.mergeCells(gHdrRow.number, 1, gHdrRow.number, NCOLS);
         gHdrRow.getCell(1).font = { bold: true, color: { argb: 'FF06231A' }, size: 10 };
         gHdrRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD4EDDA' } };
-        gHdrRow.height = 18;
+        gHdrRow.getCell(1).alignment = { vertical: 'middle', wrapText: true };
+        gHdrRow.height = 20;
 
         let gEf = 0, gQr = 0, gTotal = 0;
 
@@ -8218,39 +8232,58 @@
           gEf += ef; gQr += qr; gTotal += Number(p.monto);
           const comp = p.numero_comprobante_externo || '-';
           const pagadoPor = p.pagador_tipo === 'otro' ? (p.pagador_nombre || 'Otro') : `${est.apellidos || ''} ${est.nombres || ''}`.trim();
+          const nroReciboXls = p.recibos?.numero_recibo ? String(p.recibos.numero_recibo).padStart(6, '0') : '-';
 
           const dataRow = ws1.addRow([
-            numXls, fecha, pagadoPor,
+            numXls, nroReciboXls, fecha, pagadoPor,
             `${est.apellidos || ''} ${est.nombres || ''}`.trim(),
             metLabel, comp,
             ef || null, qr || null, Number(p.monto)
           ]);
-          [7, 8, 9].forEach(col => {
-            dataRow.getCell(col).alignment = { horizontal: 'right' };
+          dataRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+          dataRow.getCell(2).alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+          [3, 4, 5, 6, 7].forEach(col => {
+            dataRow.getCell(col).alignment = { vertical: 'middle', wrapText: true };
+          });
+          [8, 9, 10].forEach(col => {
+            dataRow.getCell(col).alignment = { horizontal: 'right', vertical: 'middle', wrapText: true };
             dataRow.getCell(col).numFmt = '#,##0.00';
           });
         });
 
         // Fila subtotal del grupo
-        const subRow = ws1.addRow(['', '', '', '', '', `Subtotal ${semLabel} / ${turnoLabel}`, gEf || null, gQr || null, gTotal]);
+        const subRow = ws1.addRow(['', '', '', '', '', '', `Subtotal ${semLabel} / ${turnoLabel}`, gEf || null, gQr || null, gTotal]);
         subRow.font = { bold: true };
-        [7, 8, 9].forEach(col => {
+        subRow.getCell(7).alignment = { horizontal: 'right', vertical: 'middle', wrapText: true };
+        [8, 9, 10].forEach(col => {
           subRow.getCell(col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD0EBD9' } };
-          subRow.getCell(col).alignment = { horizontal: 'right' };
+          subRow.getCell(col).alignment = { horizontal: 'right', vertical: 'middle', wrapText: true };
           subRow.getCell(col).numFmt = '#,##0.00';
         });
         ws1.addRow([]);
       });
 
       // Fila total general
-      const totalRow = ws1.addRow(['', '', '', '', '', 'TOTAL GENERAL', c.totalEfectivo || 0, c.totalQR || 0, c.totalGeneral]);
+      const totalRow = ws1.addRow(['', '', '', '', '', '', 'TOTAL GENERAL', c.totalEfectivo || 0, c.totalQR || 0, c.totalGeneral]);
       totalRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-      totalRow.eachCell(cell => { cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF06231A' } }; });
-      [7, 8, 9].forEach(col => {
-        totalRow.getCell(col).alignment = { horizontal: 'right' };
+      totalRow.eachCell(cell => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF06231A' } };
+        cell.alignment = { vertical: 'middle', wrapText: true };
+      });
+      totalRow.getCell(7).alignment = { horizontal: 'right', vertical: 'middle', wrapText: true };
+      [8, 9, 10].forEach(col => {
+        totalRow.getCell(col).alignment = { horizontal: 'right', vertical: 'middle', wrapText: true };
         totalRow.getCell(col).numFmt = '#,##0.00';
       });
-      totalRow.height = 18;
+      totalRow.height = 20;
+
+      // Asegurar wrapText en todas las celdas de la hoja para que el texto nunca quede cortado
+      ws1.eachRow({ includeEmpty: false }, row => {
+        row.eachCell({ includeEmpty: false }, cell => {
+          if (!cell.alignment) cell.alignment = { wrapText: true };
+          else cell.alignment.wrapText = true;
+        });
+      });
 
       // Hoja 2: Resumen
       const ws2 = wb.addWorksheet('Resumen');
