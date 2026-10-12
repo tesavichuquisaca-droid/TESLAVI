@@ -7850,6 +7850,7 @@
           const pagadoPor = p.pagador_tipo === 'otro' ? (p.pagador_nombre || 'Otro') : `${est.apellidos || ''} ${est.nombres || ''}`.trim();
 
           const nroRecibo = p.recibos?.numero_recibo ? String(p.recibos.numero_recibo).padStart(6, '0') : '-';
+          const cuotaLabel = p.cuotas?.numero_cuota ? `Cuota ${p.cuotas.numero_cuota}` : '-';
 
           filas += `<tr>
             <td style="text-align:center;">${numGlobal}</td>
@@ -7857,6 +7858,7 @@
             <td>${fecha}</td>
             <td>${pagadoPor}</td>
             <td>${est.apellidos || ''} ${est.nombres || ''}</td>
+            <td style="text-align:center;font-weight:600;">${cuotaLabel}</td>
             <td style="text-transform:capitalize;">${metLabel}</td>
             <td>${comprobante}</td>
             <td style="text-align:right;">${mEf ? bs(mEf) : '-'}</td>
@@ -7874,7 +7876,7 @@
             <div class="form-section-body" style="padding:0;overflow-x:auto;">
               <table class="materia-table" style="width:100%;min-width:850px;">
                 <thead><tr>
-                  <th>#</th><th>N° Recibo</th><th>Fecha</th><th>Pagador</th><th>Estudiante</th>
+                  <th>#</th><th>N° Recibo</th><th>Fecha</th><th>Pagador</th><th>Estudiante</th><th>Cuota</th>
                   <th>Método</th><th>Comprobante</th>
                   <th style="text-align:right;">Efec. (Bs)</th>
                   <th style="text-align:right;">QR (Bs)</th>
@@ -7882,7 +7884,7 @@
                 </tr></thead>
                 <tbody>${filas}</tbody>
                 <tfoot><tr style="background:#f0faf3;">
-                  <td colspan="7" style="text-align:right;font-weight:700;padding:8px;">Subtotal ${semLabel} / ${turnoLabel}:</td>
+                  <td colspan="8" style="text-align:right;font-weight:700;padding:8px;">Subtotal ${semLabel} / ${turnoLabel}:</td>
                   <td style="text-align:right;font-weight:700;padding:8px;">${gEf ? bs(gEf) : '-'}</td>
                   <td style="text-align:right;font-weight:700;padding:8px;">${gQR ? bs(gQR) : '-'}</td>
                   <td style="text-align:right;font-weight:700;padding:8px;color:var(--verde-800);">${bs(gTotal)}</td>
@@ -8089,14 +8091,15 @@
           const comp = p.numero_comprobante_externo || '-';
           const pagadoPor = p.pagador_tipo === 'otro' ? (p.pagador_nombre || 'Otro') : `${est.apellidos || ''} ${est.nombres || ''}`.trim();
           const nroReciboPDF = p.recibos?.numero_recibo ? String(p.recibos.numero_recibo).padStart(6, '0') : '-';
-          return [numPDF, nroReciboPDF, fecha, pagadoPor, `${est.apellidos || ''} ${est.nombres || ''}`.trim(), metLabel, comp, mEf ? bs(mEf) : '-', mQr ? bs(mQr) : '-', bs(p.monto)];
+          const cuotaLabelPDF = p.cuotas?.numero_cuota ? ('Cuota ' + p.cuotas.numero_cuota) : '-';
+          return [numPDF, nroReciboPDF, fecha, pagadoPor, `${est.apellidos || ''} ${est.nombres || ''}`.trim(), cuotaLabelPDF, metLabel, comp, mEf ? bs(mEf) : '-', mQr ? bs(mQr) : '-', bs(p.monto)];
         });
 
         doc.autoTable({
           startY: nextY + 3,
-          head: [['#', 'N° Recibo', 'Fecha', 'Pagador', 'Estudiante', 'Método', 'Comprobante', 'Efec.', 'QR', 'Total']],
+          head: [['#', 'N° Recibo', 'Fecha', 'Pagador', 'Estudiante', 'Cuota', 'Método', 'Comprobante', 'Efec.', 'QR', 'Total']],
           body: bodyGrupo,
-          foot: [['', '', '', '', '', '', `Subtotal (${gpagos.length})`, gEfT ? bs(gEfT) : '-', gQRT ? bs(gQRT) : '-', bs(gTotalT)]],
+          foot: [['', '', '', '', '', '', '', `Subtotal (${gpagos.length})`, gEfT ? bs(gEfT) : '-', gQRT ? bs(gQRT) : '-', bs(gTotalT)]],
           headStyles: { fillColor: [20, 108, 70], textColor: [255, 255, 255], fontSize: 7 },
           footStyles: { fillColor: [208, 235, 218], fontStyle: 'bold', fontSize: 7 },
           styles: { fontSize: 6.5, cellPadding: 1.5 },
@@ -8104,13 +8107,14 @@
             0: { cellWidth: 7 },
             1: { cellWidth: 14, halign: 'center' },
             2: { cellWidth: 24 },
-            3: { cellWidth: 30 },
-            4: { cellWidth: 35 },
-            5: { cellWidth: 16 },
-            6: { cellWidth: 20 },
-            7: { halign: 'right', cellWidth: 16 },
-            8: { halign: 'right', cellWidth: 16 },
-            9: { halign: 'right', fontStyle: 'bold', cellWidth: 16 }
+            3: { cellWidth: 28 },
+            4: { cellWidth: 32 },
+            5: { cellWidth: 14, halign: 'center' },
+            6: { cellWidth: 15 },
+            7: { cellWidth: 18 },
+            8: { halign: 'right', cellWidth: 15 },
+            9: { halign: 'right', cellWidth: 15 },
+            10: { halign: 'right', fontStyle: 'bold', cellWidth: 16 }
           },
           alternateRowStyles: { fillColor: [240, 245, 242] }
         });
@@ -8154,13 +8158,14 @@
 
       // Hoja 1: Detalle de pagos agrupado por Semestre y Turno
       const ws1 = wb.addWorksheet('Pagos Recibidos');
-      const NCOLS = 10;
+      const NCOLS = 11;
       ws1.columns = [
         { key: 'num',        width: 6  },
         { key: 'recibo',     width: 14 },
         { key: 'fecha',      width: 22 },
         { key: 'pagador',    width: 28 },
         { key: 'estudiante', width: 32 },
+        { key: 'cuota',      width: 14 },
         { key: 'metodo',     width: 15 },
         { key: 'comp',       width: 18 },
         { key: 'efectivo',   width: 14 },
@@ -8178,7 +8183,7 @@
       ws1.getRow(1).height = 26;
 
       // Cabecera de columnas (fila 2)
-      const hdrCols = ['#', 'N° Recibo', 'Fecha', 'Pagador', 'Estudiante', 'Método', 'Comprobante', 'Efec. (Bs)', 'QR (Bs)', 'Total (Bs)'];
+      const hdrCols = ['#', 'N° Recibo', 'Fecha', 'Pagador', 'Estudiante', 'Cuota', 'Método', 'Comprobante', 'Efec. (Bs)', 'QR (Bs)', 'Total (Bs)'];
       const hdrRow = ws1.getRow(2);
       hdrRow.values = hdrCols;
       hdrRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
@@ -8189,6 +8194,7 @@
       });
       hdrRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
       hdrRow.getCell(2).alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+      hdrRow.getCell(6).alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
 
       // Agrupar igual que el HTML
       const gXls = new Map();
@@ -8233,29 +8239,32 @@
           const comp = p.numero_comprobante_externo || '-';
           const pagadoPor = p.pagador_tipo === 'otro' ? (p.pagador_nombre || 'Otro') : `${est.apellidos || ''} ${est.nombres || ''}`.trim();
           const nroReciboXls = p.recibos?.numero_recibo ? String(p.recibos.numero_recibo).padStart(6, '0') : '-';
+          const cuotaLabelXls = p.cuotas?.numero_cuota ? `Cuota ${p.cuotas.numero_cuota}` : '-';
 
           const dataRow = ws1.addRow([
             numXls, nroReciboXls, fecha, pagadoPor,
             `${est.apellidos || ''} ${est.nombres || ''}`.trim(),
+            cuotaLabelXls,
             metLabel, comp,
             ef || null, qr || null, Number(p.monto)
           ]);
           dataRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
           dataRow.getCell(2).alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
-          [3, 4, 5, 6, 7].forEach(col => {
+          [3, 4, 5, 7, 8].forEach(col => {
             dataRow.getCell(col).alignment = { vertical: 'middle', wrapText: true };
           });
-          [8, 9, 10].forEach(col => {
+          dataRow.getCell(6).alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+          [9, 10, 11].forEach(col => {
             dataRow.getCell(col).alignment = { horizontal: 'right', vertical: 'middle', wrapText: true };
             dataRow.getCell(col).numFmt = '#,##0.00';
           });
         });
 
         // Fila subtotal del grupo
-        const subRow = ws1.addRow(['', '', '', '', '', '', `Subtotal ${semLabel} / ${turnoLabel}`, gEf || null, gQr || null, gTotal]);
+        const subRow = ws1.addRow(['', '', '', '', '', '', '', `Subtotal ${semLabel} / ${turnoLabel}`, gEf || null, gQr || null, gTotal]);
         subRow.font = { bold: true };
-        subRow.getCell(7).alignment = { horizontal: 'right', vertical: 'middle', wrapText: true };
-        [8, 9, 10].forEach(col => {
+        subRow.getCell(8).alignment = { horizontal: 'right', vertical: 'middle', wrapText: true };
+        [9, 10, 11].forEach(col => {
           subRow.getCell(col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD0EBD9' } };
           subRow.getCell(col).alignment = { horizontal: 'right', vertical: 'middle', wrapText: true };
           subRow.getCell(col).numFmt = '#,##0.00';
@@ -8264,14 +8273,14 @@
       });
 
       // Fila total general
-      const totalRow = ws1.addRow(['', '', '', '', '', '', 'TOTAL GENERAL', c.totalEfectivo || 0, c.totalQR || 0, c.totalGeneral]);
+      const totalRow = ws1.addRow(['', '', '', '', '', '', '', 'TOTAL GENERAL', c.totalEfectivo || 0, c.totalQR || 0, c.totalGeneral]);
       totalRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
       totalRow.eachCell(cell => {
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF06231A' } };
         cell.alignment = { vertical: 'middle', wrapText: true };
       });
-      totalRow.getCell(7).alignment = { horizontal: 'right', vertical: 'middle', wrapText: true };
-      [8, 9, 10].forEach(col => {
+      totalRow.getCell(8).alignment = { horizontal: 'right', vertical: 'middle', wrapText: true };
+      [9, 10, 11].forEach(col => {
         totalRow.getCell(col).alignment = { horizontal: 'right', vertical: 'middle', wrapText: true };
         totalRow.getCell(col).numFmt = '#,##0.00';
       });
