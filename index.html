@@ -2800,7 +2800,7 @@
                         todavía.</p>
                     </div>
                     <button type="button" class="btn-peligro"
-                      style="width:auto; padding:8px 16px; font-size:13px; flex-shrink:0;"
+                      style="width:auto; padding:8px 16px; font-size:13px; flex-shrink:0;" id="btnCambiarPlanPago"
                       onclick="window.abrirModalCambiarPlan()">Cambiar Plan de Pago</button>
                   </div>
                   <div class="form-section-body" style="padding-top: 0;">
@@ -6163,7 +6163,7 @@
             <td style="font-family:var(--f-datos); font-size:12px;">${e.ci || '—'}</td>
             ${celdasCuotas}
             <td style="text-align:right;">${saldoTxt}</td>
-            <td style="text-align:center;">${badgeHtml(ESTADO_FINANCIERO_BADGE, e.estado_financiero)}</td>
+            <td style="text-align:center;">${cuotasEst.length === 0 ? '<span style="background:#F1F5F9; color:#64748B; padding:4px 10px; border-radius:100px; font-size:12px; font-weight:600;">Sin plan</span>' : badgeHtml(ESTADO_FINANCIERO_BADGE, e.estado_financiero)}</td>
           </tr>
         `;
       }).join('');
@@ -6209,7 +6209,7 @@
       // que nunca quede desincronizado con los puntos de cuota de abajo.
       try { await supabaseClient.rpc('recalcular_estado_financiero_estudiante', { p_estudiante_id: estId }); } catch (e) { console.warn('No se pudo recalcular el estado financiero del estudiante', e); }
       const { data: estFresco } = await supabaseClient.from('estudiantes').select('estado_financiero').eq('id', estId).single();
-      document.getElementById('financieroBadgeEstado').innerHTML = badgeHtml(ESTADO_FINANCIERO_BADGE, estFresco ? estFresco.estado_financiero : 'AL_DIA');
+      document.getElementById('financieroBadgeEstado').innerHTML = !planActivo ? '<span style="background:#F1F5F9; color:#64748B; padding:4px 10px; border-radius:100px; font-size:12px; font-weight:600;">Sin plan</span>' : badgeHtml(ESTADO_FINANCIERO_BADGE, estFresco ? estFresco.estado_financiero : 'AL_DIA');
 
       // La tabla de arriba (1. Seleccionar Estudiante) usa una copia en memoria
       // de estado_financiero — sin esto queda con el badge viejo hasta recargar
@@ -6253,13 +6253,16 @@
       // cuotas
       const tbody = document.getElementById('tbodyCuotasFinanciero');
       const planInfo = document.getElementById('financieroPlanInfo');
+      const btnCambiarPlan = document.getElementById('btnCambiarPlanPago');
       if (errCuotas) {
         tbody.innerHTML = `<tr><td colspan="7" class="tabla-vacia" style="color:var(--error-texto);"><div class="tabla-vacia-icono">${ICONO_VACIO.advertencia}</div><div class="tabla-vacia-texto">Error al cargar cuotas.</div></td></tr>`;
       } else if (!cuotas || cuotas.length === 0) {
         tbody.innerHTML = window.filaVacia(7, 'Sin cuotas.', ICONO_VACIO.clipboard);
         planInfo.textContent = 'Este estudiante no tiene un plan de pago activo todavía.';
+        if (btnCambiarPlan) { btnCambiarPlan.textContent = 'Asignar Plan de Pago'; btnCambiarPlan.className = 'btn-ingresar'; }
       } else {
         planInfo.textContent = `${cuotas.length} cuota(s).`;
+        if (btnCambiarPlan) { btnCambiarPlan.textContent = 'Cambiar Plan de Pago'; btnCambiarPlan.className = 'btn-peligro'; }
         tbody.innerHTML = cuotas.map(c => {
           return `
           <tr>
@@ -6467,8 +6470,13 @@
     window.guardarCambioTipoPlan = async function () {
       const est = window.estudianteFinancieroActual;
       if (!est) return;
+
       const msg = document.getElementById('mensajeModalCambiarPlan');
       const btn = document.getElementById('btnConfirmarCambiarPlan');
+
+      // Limpiar mensaje anterior
+      msg.className = 'mensaje';
+      msg.textContent = '';
 
       const tipoBtn = document.querySelector('#segmentadoTipoPlan .seg-btn.activo');
       const tipoPlan = tipoBtn ? tipoBtn.dataset.tipo : 'cuotas_iguales';
@@ -6478,59 +6486,88 @@
 
       if (!costo || costo <= 0) {
         msg.className = 'mensaje error visible';
-        msg.textContent = 'Ingresá el costo total del plan.';
+        msg.textContent = 'Ingresa el costo total del plan.';
         return;
       }
       if (tipoPlan === 'cuotas_iguales' && (!numCuotas || numCuotas < 1)) {
         msg.className = 'mensaje error visible';
-        msg.textContent = 'Ingresá el número de cuotas.';
+        msg.textContent = 'Ingresa el numero de cuotas.';
         return;
       }
       if (!fecha) {
         msg.className = 'mensaje error visible';
-        msg.textContent = 'Elegí una fecha de vencimiento.';
+        msg.textContent = 'Elige una fecha de vencimiento.';
         return;
       }
 
       const plan = window.planActivoFinancieroActual;
+      // Si no hay config cargada, intentar cargarla
+      if (!window.configFinancieroDefault && window.cargarConfigFinancieraDefault) {
+        await window.cargarConfigFinancieraDefault();
+      }
       const cfg = window.configFinancieroDefault || {};
-      const semestre = plan?.semestre || String(est.semestre);
+      const semestre = plan?.semestre || String(est.semestre || '1');
       const gestion = plan?.gestion || cfg.gestion_actual;
       if (!gestion) {
         msg.className = 'mensaje error visible';
-        msg.textContent = 'No hay una gestión configurada. Definila en Financiero → Configuración.';
+        msg.textContent = 'No hay una gestión configurada. Ve a Financiero → Configuración y define la gestión actual primero.';
+        alert('⚠️ FALTA GESTIÓN\n\nAntes de asignar un plan, debes ir a:\nFinanciero → Configuración → y definir la Gestión actual (ej: 2025-1)');
         return;
       }
 
       btn.disabled = true;
       msg.className = 'mensaje visible';
-      msg.style.background = 'var(--fondo)';
+      msg.style.background = '';
       msg.style.color = 'var(--texto-suave)';
       msg.textContent = 'Guardando...';
+
       try {
-        const { error } = await supabaseClient.rpc('crear_plan_pago', {
+        const obsMap = {
+          anual: 'Plan anual asignado desde Financiero.',
+          unico: 'Plan semestral (pago unico) asignado desde Financiero.',
+          profesional: 'Plan profesional asignado desde Financiero.',
+          cuotas_iguales: 'Plan por cuotas asignado desde Financiero.'
+        };
+
+        // Armar params sin enviar null para evitar ambigüedad entre funciones en Supabase
+        const rpcParams = {
           p_estudiante_id: est.id,
           p_semestre: semestre,
           p_gestion: gestion,
           p_costo_normal: costo,
           p_tipo_plan: tipoPlan,
-          p_numero_cuotas: tipoPlan === 'cuotas_iguales' ? numCuotas : null,
           p_fecha_primera_cuota: fecha,
-          p_observaciones: tipoPlan === 'anual' ? 'Cambiado a plan anual (pago único) desde Financiero.'
-            : tipoPlan === 'unico' ? 'Cambiado a plan semestral (pago único) desde Financiero.'
-              : tipoPlan === 'profesional' ? 'Cambiado a plan profesional (toda la carrera) desde Financiero.'
-                : 'Cambiado a plan por cuotas desde Financiero.'
-        });
+          p_observaciones: obsMap[tipoPlan] || 'Plan asignado desde Financiero.'
+        };
+        // Solo agregar cuotas si es plan por cuotas
+        if (tipoPlan === 'cuotas_iguales') {
+          rpcParams.p_numero_cuotas = numCuotas;
+        }
+
+        const { data, error } = await supabaseClient.rpc('crear_plan_pago', rpcParams);
+
         if (error) throw error;
 
-        window.cerrarModalCambiarPlan();
-        window.toast('Plan de pago actualizado correctamente.', 'exito');
-        await window.refrescarFinancieroEstudiante();
-        await window.cargarTablaFinanciero();
+        msg.className = 'mensaje visible';
+        msg.style.background = '#E4EFE9';
+        msg.style.color = '#146C46';
+        msg.textContent = 'Plan guardado correctamente.';
+
+        setTimeout(async () => {
+          window.cerrarModalCambiarPlan();
+          await window.refrescarFinancieroEstudiante();
+          await window.cargarTablaFinanciero();
+          if (window.toast) window.toast('Plan de pago guardado correctamente.', 'exito');
+        }, 1200);
+
       } catch (err) {
-        console.error(err);
+        console.error('Error al guardar plan:', err);
+        const errMsg = err.message || 'No se pudo guardar. Abre la consola del navegador (F12) para ver el detalle.';
         msg.className = 'mensaje error visible';
-        msg.textContent = 'Error: ' + (err.message || 'no se pudo cambiar el plan');
+        msg.style.background = '';
+        msg.style.color = '';
+        msg.textContent = 'Error: ' + errMsg;
+        alert('❌ ERROR AL GUARDAR PLAN\n\n' + errMsg);
       } finally {
         btn.disabled = false;
       }
@@ -9731,6 +9768,7 @@
         let estTotalNotas = 0;
         let estCountNotas = 0;
         let estTotalFaltas = 0;
+        let estTotalFJ = 0;
 
         // Procesar Calificaciones (Promedios)
         if (est.calificaciones) {
@@ -9771,7 +9809,7 @@
                 estTotalFaltas++;
                 totalFaltasGlobal++;
               } else if (reg.estado === 'Falta Justificada') {
-                fj++;
+                estTotalFJ++;
                 totalFJGlobal++;
                 totalPresentesGlobal++; // Falta Justificada cuenta como presente
               } else if (reg.estado === 'Presente' || reg.estado === 'Atrasado') {
