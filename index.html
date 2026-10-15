@@ -3473,6 +3473,7 @@
               <div>
                 <h1 class="header-title" id="tituloAdminAsistencia">Materia</h1>
                 <p class="header-desc" id="subtituloAdminAsistencia">Semestre - Turno</p>
+                <p class="header-desc" id="docenteAdminAsistencia" style="margin-top:2px; color:var(--verde-700); font-weight:500;"></p>
               </div>
               <div style="display: flex; gap: 8px;">
                 <button onclick="window.exportarExcelHistorialAdmin()" class="btn-ingresar"
@@ -6843,11 +6844,11 @@
         .single();
       if (error || !recibo) throw new Error(error ? error.message : 'Recibo no encontrado');
 
-      const p = recibo.pagos;
+      const p = Array.isArray(recibo.pagos) ? recibo.pagos[0] : (recibo.pagos || {});
       let est = window.estudiantesFinancieroCache?.find(e => e.id === p.estudiante_id) || window.estudianteFinancieroActual;
       if (!est || est.id !== p.estudiante_id) {
         const { data: estData } = await supabaseClient.from('estudiantes').select('id, nombres, apellidos, ci, celular').eq('id', p.estudiante_id).single();
-        est = estData;
+        est = estData || { nombres: '', apellidos: '', ci: '', celular: '' };
       }
 
       // Obtener iniciales del cajero que registró el pago (no quien imprime)
@@ -6886,13 +6887,16 @@
           : (pago.metodo_pago.charAt(0).toUpperCase() + pago.metodo_pago.slice(1));
 
         // Determinar quién pagó
-        const quienPago = pago.pagador_tipo === 'otro' && pago.pagador_nombre
-          ? pago.pagador_nombre
-          : `${estudiante.apellidos} ${estudiante.nombres}` + ' (alumno)';
+        const nombrePagador = (pago.pagador_nombre || '').trim();
+        const esOtro = (pago.pagador_tipo || '').trim().toLowerCase() === 'otro';
+        const nombreAlumno = `${estudiante?.apellidos || ''} ${estudiante?.nombres || ''}`.trim() || 'Estudiante';
+        const quienPago = (esOtro && nombrePagador) || (nombrePagador && nombrePagador.toLowerCase() !== nombreAlumno.toLowerCase())
+          ? nombrePagador
+          : `${nombreAlumno} (alumno)`;
 
         const filas = [
-          ["Alumno:", `${estudiante.apellidos} ${estudiante.nombres}`],
-          ["CI:", estudiante.ci],
+          ["Alumno:", nombreAlumno],
+          ["CI:", estudiante?.ci || "—"],
           ["Plan:", planLabel],
           ["Cuota:", pago.cuotas ? `Cuota ${pago.cuotas.numero_cuota}` : "—"],
           ["Fecha:", fecha.toLocaleDateString('es-BO') + " " + fecha.toLocaleTimeString('es-BO')],
@@ -7847,7 +7851,7 @@
           const mQr = esMixto ? Number(p.monto_qr || 0) : (met === 'qr' ? Number(p.monto) : 0);
           gEf += mEf; gQR += mQr; gTotal += Number(p.monto);
           const comprobante = p.numero_comprobante_externo || '-';
-          const pagadoPor = p.pagador_tipo === 'otro' ? (p.pagador_nombre || 'Otro') : `${est.apellidos || ''} ${est.nombres || ''}`.trim();
+          const pagadoPor = (p.pagador_tipo === 'otro' || (p.pagador_nombre && p.pagador_nombre.trim())) ? (p.pagador_nombre.trim() || 'Otro') : `${est.apellidos || ''} ${est.nombres || ''}`.trim();
 
           const nroRecibo = p.recibos?.numero_recibo ? String(p.recibos.numero_recibo).padStart(6, '0') : '-';
           const cuotaLabel = p.cuotas?.numero_cuota ? `Cuota ${p.cuotas.numero_cuota}` : '-';
@@ -7926,15 +7930,106 @@
 
     window.cargarReporteMorosidad = async function () {
       const cont = document.getElementById('reportesMorosidad');
-      const { data, error } = await supabaseClient.from('vista_estado_financiero_estudiante').select('*').gt('saldo', 0).order('saldo', { ascending: false });
+      const [{ data, error }, { data: estData }] = await Promise.all([
+        supabaseClient.from('vista_estado_financiero_estudiante').select('*').gt('saldo', 0).order('saldo', { ascending: false }),
+        supabaseClient.from('estudiantes').select('id, semestre, turno')
+      ]);
+
       if (error || !data || data.length === 0) {
-        cont.innerHTML = '<p style="color:var(--texto-suave);">Sin estudiantes con saldo pendiente.</p>';
+        cont.innerHTML = '<p style="color:var(--texto-suave); padding: 16px 0;">Sin estudiantes con saldo pendiente.</p>';
         window.moroCache = [];
         return;
       }
-      window.moroCache = data;
-      cont.innerHTML = `<table class="materia-table" style="width:100%;"><thead><tr><th>Estudiante</th><th>CI</th><th style="text-align:right;">Saldo</th><th style="text-align:center;">Cuotas vencidas</th><th style="text-align:center;">Estado</th></tr></thead><tbody>${data.map(e => `<tr><td>${e.apellidos} ${e.nombres}</td><td>${e.ci}</td><td style="text-align:right; font-weight:600; color:var(--error-texto);">${bs(e.saldo)}</td><td style="text-align:center;">${e.cuotas_vencidas}</td><td style="text-align:center;">${badgeHtml(ESTADO_FINANCIERO_BADGE, e.estado_financiero)}</td></tr>`).join('')
-        }</tbody></table>`;
+
+      const mapEst = new Map((estData || []).map(e => [e.id, e]));
+      const morosos = data.map(m => {
+        const est = mapEst.get(m.estudiante_id) || {};
+        return {
+          ...m,
+          semestre: est.semestre != null ? est.semestre : null,
+          turno: est.turno || 'Sin Turno'
+        };
+      });
+
+      window.moroCache = morosos;
+
+      // Agrupar por Semestre y Turno
+      const grupos = new Map();
+      let totalMora = 0;
+      morosos.forEach(e => {
+        totalMora += Number(e.saldo || 0);
+        const semNum = e.semestre != null ? Number(e.semestre) : 99;
+        const semLabel = e.semestre != null ? `${e.semestre}° Semestre` : 'Sin Semestre';
+        const turnoLabel = e.turno || 'Sin Turno';
+        const clave = `${String(semNum).padStart(2, '0')}|${semLabel}|${turnoLabel}`;
+        if (!grupos.has(clave)) grupos.set(clave, []);
+        grupos.get(clave).push(e);
+      });
+      const gruposOrdenados = [...grupos.entries()].sort(([a], [b]) => a.localeCompare(b));
+
+      let html = `
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px; padding:12px 16px; background:var(--fondo, #f8fafc); border:1px solid var(--borde); border-radius:var(--radio);">
+          <div style="font-size:13px; color:var(--texto-suave);">
+            Total con saldo pendiente: <strong style="color:var(--texto);">${morosos.length}</strong> estudiante(s) en <strong style="color:var(--texto);">${gruposOrdenados.length}</strong> curso(s)
+          </div>
+          <div style="font-size:14px; font-weight:700; color:var(--error-texto, #d32f2f);">
+            Deuda total acumulada: ${bs(totalMora)}
+          </div>
+        </div>
+      `;
+
+      gruposOrdenados.forEach(([clave, gmorosos]) => {
+        const partes = clave.split('|');
+        const semLabel = partes[1];
+        const turnoLabel = partes[2];
+        gmorosos.sort((a, b) => `${a.apellidos} ${a.nombres}`.localeCompare(`${b.apellidos} ${b.nombres}`));
+
+        let subtotalGrupo = 0;
+        const filas = gmorosos.map((e, idx) => {
+          subtotalGrupo += Number(e.saldo || 0);
+          return `<tr>
+            <td style="text-align:center; width:40px; color:var(--texto-suave); font-size:12px;">${idx + 1}</td>
+            <td style="font-weight:600; color:var(--verde-950);">${e.apellidos} ${e.nombres}</td>
+            <td style="font-family:var(--f-datos);">${e.ci}</td>
+            <td style="text-align:right; font-weight:700; color:var(--error-texto); font-family:var(--f-datos);">${bs(e.saldo)}</td>
+            <td style="text-align:center; font-family:var(--f-datos);">${e.cuotas_vencidas}</td>
+            <td style="text-align:center;">${badgeHtml(ESTADO_FINANCIERO_BADGE, e.estado_financiero)}</td>
+          </tr>`;
+        }).join('');
+
+        html += `
+          <div style="margin-bottom: 20px; border: 1px solid var(--borde); border-radius: var(--radio); overflow: hidden; background: var(--blanco, #fff); box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 16px; background: var(--verde-50, #f0fdf4); border-bottom: 1px solid var(--borde);">
+              <div>
+                <span style="font-weight: 700; font-size: 13.5px; color: var(--verde-950, #06231a);">${semLabel} — Turno ${turnoLabel}</span>
+                <span style="font-size: 12px; color: var(--texto-suave); margin-left: 8px;">(${gmorosos.length} estudiante${gmorosos.length === 1 ? '' : 's'})</span>
+              </div>
+              <div style="font-size: 13px; font-weight: 700; color: var(--error-texto, #d32f2f);">
+                Subtotal: ${bs(subtotalGrupo)}
+              </div>
+            </div>
+            <div style="overflow-x: auto;">
+              <table class="materia-table" style="width:100%; margin: 0;">
+                <thead>
+                  <tr>
+                    <th style="width: 40px; text-align: center;">#</th>
+                    <th>Estudiante</th>
+                    <th style="width: 110px;">CI</th>
+                    <th style="text-align: right; width: 120px;">Saldo</th>
+                    <th style="text-align: center; width: 130px;">Cuotas vencidas</th>
+                    <th style="text-align: center; width: 120px;">Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${filas}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      });
+
+      cont.innerHTML = html;
     };
 
     window.exportarPdfMorosidad = async function () {
@@ -7943,27 +8038,111 @@
         return;
       }
       const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
+      const doc = new jsPDF('p', 'mm', 'a4');
+      const fechaHoy = new Date().toLocaleDateString('es-ES');
+
+      const grupos = new Map();
+      let totalMora = 0;
+      window.moroCache.forEach(e => {
+        totalMora += Number(e.saldo || 0);
+        const semNum = e.semestre != null ? Number(e.semestre) : 99;
+        const semLabel = e.semestre != null ? `${e.semestre}° Semestre` : 'Sin Semestre';
+        const turnoLabel = e.turno || 'Sin Turno';
+        const clave = `${String(semNum).padStart(2, '0')}|${semLabel}|${turnoLabel}`;
+        if (!grupos.has(clave)) grupos.set(clave, []);
+        grupos.get(clave).push(e);
+      });
+      const gruposOrdenados = [...grupos.entries()].sort(([a], [b]) => a.localeCompare(b));
+
       doc.setFillColor(6, 35, 26);
       doc.rect(0, 0, 210, 20, 'F');
       doc.setTextColor(255, 255, 255);
-      doc.setFontSize(14);
+      doc.setFontSize(13);
       doc.setFont("helvetica", "bold");
-      doc.text("INSTITUTO TECNOLOGICO TESLAVI", 105, 12, { align: "center" });
+      doc.text("INSTITUTO TECNOLÓGICO TESLAVI", 105, 12, { align: "center" });
       const logoMoro = await window.obtenerLogoTeslavi();
       if (logoMoro) doc.addImage(logoMoro, 'JPEG', 8, 3, 14, 14);
+
       doc.setTextColor(11, 59, 42);
       doc.setFontSize(12);
-      doc.text("REPORTE DE MOROSIDAD", 105, 30, { align: "center" });
+      doc.setFont("helvetica", "bold");
+      doc.text("REPORTE DE MOROSIDAD (POR CURSOS Y TURNOS)", 105, 28, { align: "center" });
 
-      doc.autoTable({
-        startY: 40,
-        head: [['Estudiante', 'CI', 'Saldo', 'Cuotas Vencidas', 'Estado']],
-        body: window.moroCache.map(e => [`${e.apellidos} ${e.nombres}`, e.ci, bs(e.saldo), e.cuotas_vencidas, e.estado_financiero]),
-        headStyles: { fillColor: [20, 108, 70], textColor: [255, 255, 255] },
-        styles: { fontSize: 10, cellPadding: 3 },
-        alternateRowStyles: { fillColor: [240, 245, 242] }
+      doc.setFontSize(8.5);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(80, 80, 80);
+      doc.text(`Fecha: ${fechaHoy}  |  Total Estudiantes: ${window.moroCache.length}  |  Deuda Total: ${bs(totalMora)}`, 105, 34, { align: "center" });
+      doc.setTextColor(0, 0, 0);
+
+      let currentY = 40;
+
+      gruposOrdenados.forEach(([clave, gmorosos]) => {
+        const partes = clave.split('|');
+        const semLabel = partes[1];
+        const turnoLabel = partes[2];
+        gmorosos.sort((a, b) => `${a.apellidos} ${a.nombres}`.localeCompare(`${b.apellidos} ${b.nombres}`));
+
+        let subtotalSaldo = 0;
+        const bodyGrupo = gmorosos.map((e, idx) => {
+          subtotalSaldo += Number(e.saldo || 0);
+          const estadoTxt = ESTADO_FINANCIERO_BADGE[e.estado_financiero]?.label || e.estado_financiero;
+          return [idx + 1, `${e.apellidos} ${e.nombres}`, e.ci, bs(e.saldo), e.cuotas_vencidas, estadoTxt];
+        });
+
+        if (currentY > 245) {
+          doc.addPage('a4', 'portrait');
+          currentY = 20;
+        }
+
+        // Título del grupo
+        doc.setFillColor(240, 253, 244);
+        doc.rect(14, currentY, 182, 7, 'F');
+        doc.setDrawColor(180, 210, 190);
+        doc.rect(14, currentY, 182, 7, 'S');
+
+        doc.setFontSize(9.5);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(6, 35, 26);
+        doc.text(`${semLabel} — Turno: ${turnoLabel} (${gmorosos.length} est.)`, 17, currentY + 4.8);
+
+        doc.setTextColor(198, 40, 40);
+        doc.text(`Subtotal: ${bs(subtotalSaldo)}`, 193, currentY + 4.8, { align: "right" });
+        doc.setTextColor(0, 0, 0);
+
+        doc.autoTable({
+          startY: currentY + 8,
+          head: [['#', 'Estudiante', 'CI', 'Saldo', 'Cuotas Venc.', 'Estado']],
+          body: bodyGrupo,
+          foot: [['', `Subtotal (${gmorosos.length} est.)`, '', bs(subtotalSaldo), '', '']],
+          headStyles: { fillColor: [20, 108, 70], textColor: [255, 255, 255], fontSize: 8, halign: 'center' },
+          footStyles: { fillColor: [230, 245, 235], textColor: [6, 35, 26], fontStyle: 'bold', fontSize: 8 },
+          bodyStyles: { fontSize: 8 },
+          columnStyles: {
+            0: { cellWidth: 8, halign: 'center' },
+            1: { cellWidth: 70 },
+            2: { cellWidth: 26, halign: 'center' },
+            3: { cellWidth: 28, halign: 'right' },
+            4: { cellWidth: 24, halign: 'center' },
+            5: { cellWidth: 26, halign: 'center' }
+          },
+          margin: { left: 14, right: 14 },
+          styles: { cellPadding: 1.5 },
+          alternateRowStyles: { fillColor: [248, 250, 248] }
+        });
+
+        currentY = doc.lastAutoTable.finalY + 8;
       });
+
+      if (currentY > 265) {
+        doc.addPage('a4', 'portrait');
+        currentY = 20;
+      }
+      doc.setFillColor(6, 35, 26);
+      doc.rect(14, currentY, 182, 8, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.text(`TOTAL GENERAL MOROSIDAD: ${bs(totalMora)} (${window.moroCache.length} estudiantes)`, 105, currentY + 5.5, { align: "center" });
 
       doc.save('reporte_morosidad.pdf');
     };
@@ -7974,30 +8153,130 @@
         return;
       }
       const wb = new ExcelJS.Workbook();
-      const ws = wb.addWorksheet('Morosidad');
+      const ws = wb.addWorksheet('Morosidad por Cursos');
       const fechaHoy = new Date().toLocaleDateString('es-ES');
-      ws.mergeCells('A1:E1');
-      ws.getCell('A1').value = 'INSTITUTO TECNOLÓGICO TESLAVI — REPORTE DE MOROSIDAD — ' + fechaHoy;
-      ws.getCell('A1').font = { bold: true, color: { argb: 'FFFFFFFF' } };
-      ws.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF06231A' } };
-      ws.getCell('A1').alignment = { horizontal: 'center' };
-      ws.columns = [
-        { key: 'estudiante', width: 35 },
-        { key: 'ci', width: 14 },
-        { key: 'saldo', width: 14 },
-        { key: 'cuotas', width: 16 },
-        { key: 'estado', width: 18 }
-      ];
-      const hdr = ws.getRow(2);
-      hdr.values = ['Estudiante', 'CI', 'Saldo', 'Cuotas Vencidas', 'Estado'];
-      hdr.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-      hdr.eachCell(c => c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF146C46' } });
+
+      const grupos = new Map();
+      let totalMora = 0;
       window.moroCache.forEach(e => {
-        ws.addRow([`${e.apellidos} ${e.nombres}`, e.ci, Number(e.saldo), e.cuotas_vencidas, e.estado_financiero]);
+        totalMora += Number(e.saldo || 0);
+        const semNum = e.semestre != null ? Number(e.semestre) : 99;
+        const semLabel = e.semestre != null ? `${e.semestre}° Semestre` : 'Sin Semestre';
+        const turnoLabel = e.turno || 'Sin Turno';
+        const clave = `${String(semNum).padStart(2, '0')}|${semLabel}|${turnoLabel}`;
+        if (!grupos.has(clave)) grupos.set(clave, []);
+        grupos.get(clave).push(e);
       });
+      const gruposOrdenados = [...grupos.entries()].sort(([a], [b]) => a.localeCompare(b));
+
+      ws.columns = [
+        { key: 'num', width: 6 },
+        { key: 'estudiante', width: 34 },
+        { key: 'ci', width: 14 },
+        { key: 'semestre', width: 16 },
+        { key: 'turno', width: 14 },
+        { key: 'saldo', width: 16 },
+        { key: 'cuotas', width: 16 },
+        { key: 'estado', width: 16 }
+      ];
+
+      // Fila 1: Título Institucional
+      ws.mergeCells('A1:H1');
+      const celda1 = ws.getCell('A1');
+      celda1.value = 'INSTITUTO TECNOLÓGICO TESLAVI — REPORTE DE MOROSIDAD — ' + fechaHoy;
+      celda1.font = { name: 'Arial', size: 12, bold: true, color: { argb: 'FFFFFFFF' } };
+      celda1.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF06231A' } };
+      celda1.alignment = { horizontal: 'center', vertical: 'middle' };
+      ws.getRow(1).height = 30;
+
+      // Fila 2: Resumen
+      ws.mergeCells('A2:H2');
+      const celda2 = ws.getCell('A2');
+      celda2.value = `Total en mora: ${window.moroCache.length} estudiantes  |  Deuda total pendiente: Bs. ${totalMora.toFixed(2)}`;
+      celda2.font = { name: 'Arial', size: 10, italic: true };
+      celda2.alignment = { horizontal: 'center', vertical: 'middle' };
+      ws.getRow(2).height = 20;
+
+      let filaActual = 4;
+
+      gruposOrdenados.forEach(([clave, gmorosos]) => {
+        const partes = clave.split('|');
+        const semLabel = partes[1];
+        const turnoLabel = partes[2];
+        gmorosos.sort((a, b) => `${a.apellidos} ${a.nombres}`.localeCompare(`${b.apellidos} ${b.nombres}`));
+
+        let subtotalGrupo = 0;
+
+        // Encabezado de grupo
+        ws.mergeCells(`A${filaActual}:H${filaActual}`);
+        const celdaGrupo = ws.getCell(`A${filaActual}`);
+        celdaGrupo.value = `${semLabel} — Turno: ${turnoLabel} (${gmorosos.length} estudiantes)`;
+        celdaGrupo.font = { name: 'Arial', size: 11, bold: true, color: { argb: 'FF06231A' } };
+        celdaGrupo.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD4EDDA' } };
+        celdaGrupo.alignment = { vertical: 'middle', indent: 1 };
+        ws.getRow(filaActual).height = 24;
+        filaActual++;
+
+        // Cabecera de columnas para el grupo
+        const filaHdr = ws.getRow(filaActual);
+        filaHdr.values = ['#', 'Estudiante', 'CI', 'Semestre', 'Turno', 'Saldo Pendiente (Bs)', 'Cuotas Vencidas', 'Estado'];
+        filaHdr.font = { name: 'Arial', size: 9.5, bold: true, color: { argb: 'FFFFFFFF' } };
+        filaHdr.eachCell(c => {
+          c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF146C46' } };
+          c.alignment = { vertical: 'middle', horizontal: 'center' };
+        });
+        filaHdr.height = 20;
+        filaActual++;
+
+        // Filas de estudiantes
+        gmorosos.forEach((e, idx) => {
+          const saldoNum = Number(e.saldo || 0);
+          subtotalGrupo += saldoNum;
+          const estadoTxt = ESTADO_FINANCIERO_BADGE[e.estado_financiero]?.label || e.estado_financiero;
+          const row = ws.addRow([
+            idx + 1,
+            `${e.apellidos} ${e.nombres}`,
+            e.ci,
+            semLabel,
+            turnoLabel,
+            saldoNum,
+            e.cuotas_vencidas,
+            estadoTxt
+          ]);
+          row.getCell(1).alignment = { horizontal: 'center' };
+          row.getCell(3).alignment = { horizontal: 'center' };
+          row.getCell(4).alignment = { horizontal: 'center' };
+          row.getCell(5).alignment = { horizontal: 'center' };
+          row.getCell(6).alignment = { horizontal: 'right' };
+          row.getCell(6).numFmt = '#,##0.00';
+          row.getCell(7).alignment = { horizontal: 'center' };
+          row.getCell(8).alignment = { horizontal: 'center' };
+          filaActual++;
+        });
+
+        // Fila subtotal de grupo
+        const subRow = ws.addRow(['', `Subtotal ${semLabel} - ${turnoLabel}`, '', '', '', subtotalGrupo, '', '']);
+        subRow.font = { name: 'Arial', size: 9.5, bold: true };
+        subRow.getCell(6).numFmt = '#,##0.00';
+        subRow.eachCell(c => {
+          c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0FDF4' } };
+        });
+        filaActual++;
+        filaActual++;
+      });
+
+      // Total general
+      const totalRow = ws.addRow(['', 'TOTAL GENERAL MOROSIDAD', '', '', '', totalMora, '', '']);
+      totalRow.font = { name: 'Arial', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+      totalRow.getCell(6).numFmt = '#,##0.00';
+      totalRow.eachCell(c => {
+        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF06231A' } };
+      });
+      totalRow.height = 24;
+
       const buf = await wb.xlsx.writeBuffer();
       const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'morosidad.xlsx'; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'morosidad_por_cursos.xlsx'; document.body.appendChild(a); a.click(); document.body.removeChild(a);
     };
 
     window.exportarReporteFinancieroPDF = async function () {
@@ -8089,7 +8368,7 @@
           if (mQr) gQRT += mQr;
           gTotalT += Number(p.monto);
           const comp = p.numero_comprobante_externo || '-';
-          const pagadoPor = p.pagador_tipo === 'otro' ? (p.pagador_nombre || 'Otro') : `${est.apellidos || ''} ${est.nombres || ''}`.trim();
+          const pagadoPor = (p.pagador_tipo === 'otro' || (p.pagador_nombre && p.pagador_nombre.trim())) ? (p.pagador_nombre.trim() || 'Otro') : `${est.apellidos || ''} ${est.nombres || ''}`.trim();
           const nroReciboPDF = p.recibos?.numero_recibo ? String(p.recibos.numero_recibo).padStart(6, '0') : '-';
           const cuotaLabelPDF = p.cuotas?.numero_cuota ? ('Cuota ' + p.cuotas.numero_cuota) : '-';
           return [numPDF, nroReciboPDF, fecha, pagadoPor, `${est.apellidos || ''} ${est.nombres || ''}`.trim(), cuotaLabelPDF, metLabel, comp, mEf ? bs(mEf) : '-', mQr ? bs(mQr) : '-', bs(p.monto)];
@@ -8135,14 +8414,82 @@
         doc.setTextColor(255, 255, 255); doc.setFontSize(14); doc.setFont('helvetica', 'bold');
         doc.text('INSTITUTO TECNOLÓGICO TESLAVI', 148.5, 12, { align: 'center' });
         doc.setTextColor(11, 59, 42); doc.setFontSize(12);
-        doc.text('ESTUDIANTES CON SALDO PENDIENTE', 148.5, 28, { align: 'center' });
-        doc.autoTable({
-          startY: 35,
-          head: [['Estudiante', 'CI', 'Saldo Pendiente', 'Cuotas Vencidas', 'Estado']],
-          body: window.moroCache.map(e => [`${e.apellidos} ${e.nombres}`, e.ci, bs(e.saldo), e.cuotas_vencidas, e.estado_financiero]),
-          headStyles: { fillColor: [211, 47, 47], textColor: [255, 255, 255] },
-          styles: { fontSize: 8.5 }, alternateRowStyles: { fillColor: [253, 232, 232] }
+        doc.text('ESTUDIANTES CON SALDO PENDIENTE (POR SEMESTRE Y TURNO)', 148.5, 28, { align: 'center' });
+
+        const gMoroPDF = new Map();
+        let totalMoraPDF = 0;
+        window.moroCache.forEach(e => {
+          totalMoraPDF += Number(e.saldo || 0);
+          const semNum = e.semestre != null ? Number(e.semestre) : 99;
+          const semLabel = e.semestre != null ? `${e.semestre}° Semestre` : 'Sin Semestre';
+          const turnoLabel = e.turno || 'Sin Turno';
+          const clave = `${String(semNum).padStart(2, '0')}|${semLabel}|${turnoLabel}`;
+          if (!gMoroPDF.has(clave)) gMoroPDF.set(clave, []);
+          gMoroPDF.get(clave).push(e);
         });
+        const gMoroPDFOrdenados = [...gMoroPDF.entries()].sort(([a], [b]) => a.localeCompare(b));
+
+        let currentYMoro = 34;
+        gMoroPDFOrdenados.forEach(([clave, gmorosos]) => {
+          const partes = clave.split('|');
+          const semLabel = partes[1];
+          const turnoLabel = partes[2];
+          gmorosos.sort((a, b) => `${a.apellidos} ${a.nombres}`.localeCompare(`${b.apellidos} ${b.nombres}`));
+
+          let subtotalSaldo = 0;
+          const bodyGrupo = gmorosos.map((e, idx) => {
+            subtotalSaldo += Number(e.saldo || 0);
+            const estadoTxt = ESTADO_FINANCIERO_BADGE[e.estado_financiero]?.label || e.estado_financiero;
+            return [idx + 1, `${e.apellidos} ${e.nombres}`, e.ci, semLabel, turnoLabel, bs(e.saldo), e.cuotas_vencidas, estadoTxt];
+          });
+
+          if (currentYMoro > 175) {
+            doc.addPage('a4', 'landscape');
+            currentYMoro = 15;
+          }
+
+          doc.setFillColor(253, 232, 232);
+          doc.rect(14, currentYMoro, 269, 6.5, 'F');
+          doc.setFontSize(9);
+          doc.setFont("helvetica", "bold");
+          doc.setTextColor(198, 40, 40);
+          doc.text(`${semLabel} — Turno: ${turnoLabel} (${gmorosos.length} est.)`, 17, currentYMoro + 4.5);
+          doc.text(`Subtotal: ${bs(subtotalSaldo)}`, 280, currentYMoro + 4.5, { align: "right" });
+          doc.setTextColor(0, 0, 0);
+
+          doc.autoTable({
+            startY: currentYMoro + 7.5,
+            head: [['#', 'Estudiante', 'CI', 'Semestre', 'Turno', 'Saldo Pendiente', 'Cuotas Vencidas', 'Estado']],
+            body: bodyGrupo,
+            headStyles: { fillColor: [211, 47, 47], textColor: [255, 255, 255], fontSize: 8 },
+            styles: { fontSize: 7.5, cellPadding: 1.5 },
+            columnStyles: {
+              0: { cellWidth: 8, halign: 'center' },
+              1: { cellWidth: 65 },
+              2: { cellWidth: 25, halign: 'center' },
+              3: { cellWidth: 28, halign: 'center' },
+              4: { cellWidth: 28, halign: 'center' },
+              5: { cellWidth: 35, halign: 'right' },
+              6: { cellWidth: 35, halign: 'center' },
+              7: { cellWidth: 45, halign: 'center' }
+            },
+            alternateRowStyles: { fillColor: [253, 242, 242] },
+            margin: { left: 14, right: 14 }
+          });
+
+          currentYMoro = doc.lastAutoTable.finalY + 6;
+        });
+
+        if (currentYMoro > 185) {
+          doc.addPage('a4', 'landscape');
+          currentYMoro = 15;
+        }
+        doc.setFillColor(198, 40, 40);
+        doc.rect(14, currentYMoro, 269, 7.5, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(9.5);
+        doc.setFont("helvetica", "bold");
+        doc.text(`TOTAL GENERAL MOROSIDAD: ${bs(totalMoraPDF)} (${window.moroCache.length} estudiantes)`, 148.5, currentYMoro + 5.2, { align: "center" });
       }
 
       doc.save(`reporte_financiero_${c.desde}_${c.hasta}.pdf`);
@@ -8237,7 +8584,7 @@
           const qr = esMixto ? Number(p.monto_qr || 0) : (met === 'qr' ? Number(p.monto) : 0);
           gEf += ef; gQr += qr; gTotal += Number(p.monto);
           const comp = p.numero_comprobante_externo || '-';
-          const pagadoPor = p.pagador_tipo === 'otro' ? (p.pagador_nombre || 'Otro') : `${est.apellidos || ''} ${est.nombres || ''}`.trim();
+          const pagadoPor = (p.pagador_tipo === 'otro' || (p.pagador_nombre && p.pagador_nombre.trim())) ? (p.pagador_nombre.trim() || 'Otro') : `${est.apellidos || ''} ${est.nombres || ''}`.trim();
           const nroReciboXls = p.recibos?.numero_recibo ? String(p.recibos.numero_recibo).padStart(6, '0') : '-';
           const cuotaLabelXls = p.cuotas?.numero_cuota ? `Cuota ${p.cuotas.numero_cuota}` : '-';
 
@@ -8308,17 +8655,105 @@
       // Hoja 3: Morosidad
       if (window.moroCache && window.moroCache.length > 0) {
         const ws3 = wb.addWorksheet('Morosos');
-        ws3.mergeCells('A1:E1');
-        ws3.getCell('A1').value = 'ESTUDIANTES CON SALDO PENDIENTE';
-        ws3.getCell('A1').font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        ws3.columns = [
+          { key: 'num', width: 6 },
+          { key: 'est', width: 35 },
+          { key: 'ci', width: 14 },
+          { key: 'semestre', width: 16 },
+          { key: 'turno', width: 14 },
+          { key: 'saldo', width: 16 },
+          { key: 'cuotas', width: 16 },
+          { key: 'estado', width: 18 }
+        ];
+        ws3.mergeCells('A1:H1');
+        ws3.getCell('A1').value = 'ESTUDIANTES CON SALDO PENDIENTE (POR SEMESTRE Y TURNO)';
+        ws3.getCell('A1').font = { name: 'Arial', size: 12, bold: true, color: { argb: 'FFFFFFFF' } };
         ws3.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC62828' } };
-        ws3.getCell('A1').alignment = { horizontal: 'center' };
-        ws3.columns = [{ key: 'est', width: 35 }, { key: 'ci', width: 13 }, { key: 'saldo', width: 14 }, { key: 'cuotas', width: 16 }, { key: 'estado', width: 18 }];
-        const hdr3 = ws3.getRow(2);
-        hdr3.values = ['Estudiante', 'CI', 'Saldo Pendiente', 'Cuotas Vencidas', 'Estado'];
-        hdr3.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-        hdr3.eachCell(cell => cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC62828' } });
-        window.moroCache.forEach(e => ws3.addRow([`${e.apellidos} ${e.nombres}`, e.ci, Number(e.saldo), e.cuotas_vencidas, e.estado_financiero]));
+        ws3.getCell('A1').alignment = { horizontal: 'center', vertical: 'middle' };
+        ws3.getRow(1).height = 26;
+
+        const gMoroXls = new Map();
+        let totalMoraXls = 0;
+        window.moroCache.forEach(e => {
+          totalMoraXls += Number(e.saldo || 0);
+          const semNum = e.semestre != null ? Number(e.semestre) : 99;
+          const semLabel = e.semestre != null ? `${e.semestre}° Semestre` : 'Sin Semestre';
+          const turnoLabel = e.turno || 'Sin Turno';
+          const clave = `${String(semNum).padStart(2, '0')}|${semLabel}|${turnoLabel}`;
+          if (!gMoroXls.has(clave)) gMoroXls.set(clave, []);
+          gMoroXls.get(clave).push(e);
+        });
+        const gMoroXlsOrdenados = [...gMoroXls.entries()].sort(([a], [b]) => a.localeCompare(b));
+
+        let filaMoro = 3;
+        gMoroXlsOrdenados.forEach(([clave, gmorosos]) => {
+          const partes = clave.split('|');
+          const semLabel = partes[1];
+          const turnoLabel = partes[2];
+          gmorosos.sort((a, b) => `${a.apellidos} ${a.nombres}`.localeCompare(`${b.apellidos} ${b.nombres}`));
+
+          let subtotalMoro = 0;
+          ws3.mergeCells(`A${filaMoro}:H${filaMoro}`);
+          const cG = ws3.getCell(`A${filaMoro}`);
+          cG.value = `${semLabel} — Turno: ${turnoLabel} (${gmorosos.length} estudiantes)`;
+          cG.font = { name: 'Arial', size: 10.5, bold: true, color: { argb: 'FF991B1B' } };
+          cG.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEE2E2' } };
+          cG.alignment = { vertical: 'middle', indent: 1 };
+          ws3.getRow(filaMoro).height = 22;
+          filaMoro++;
+
+          const hdrRow = ws3.getRow(filaMoro);
+          hdrRow.values = ['#', 'Estudiante', 'CI', 'Semestre', 'Turno', 'Saldo Pendiente (Bs)', 'Cuotas Vencidas', 'Estado'];
+          hdrRow.font = { name: 'Arial', size: 9, bold: true, color: { argb: 'FFFFFFFF' } };
+          hdrRow.eachCell(c => {
+            c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC62828' } };
+            c.alignment = { vertical: 'middle', horizontal: 'center' };
+          });
+          hdrRow.height = 20;
+          filaMoro++;
+
+          gmorosos.forEach((e, idx) => {
+            const saldoNum = Number(e.saldo || 0);
+            subtotalMoro += saldoNum;
+            const estadoTxt = ESTADO_FINANCIERO_BADGE[e.estado_financiero]?.label || e.estado_financiero;
+            const row = ws3.addRow([
+              idx + 1,
+              `${e.apellidos} ${e.nombres}`,
+              e.ci,
+              semLabel,
+              turnoLabel,
+              saldoNum,
+              e.cuotas_vencidas,
+              estadoTxt
+            ]);
+            row.getCell(1).alignment = { horizontal: 'center' };
+            row.getCell(3).alignment = { horizontal: 'center' };
+            row.getCell(4).alignment = { horizontal: 'center' };
+            row.getCell(5).alignment = { horizontal: 'center' };
+            row.getCell(6).alignment = { horizontal: 'right' };
+            row.getCell(6).numFmt = '#,##0.00';
+            row.getCell(7).alignment = { horizontal: 'center' };
+            row.getCell(8).alignment = { horizontal: 'center' };
+            filaMoro++;
+          });
+
+          const subRow = ws3.addRow(['', `Subtotal ${semLabel} - ${turnoLabel}`, '', '', '', subtotalMoro, '', '']);
+          subRow.font = { name: 'Arial', size: 9, bold: true };
+          subRow.getCell(6).numFmt = '#,##0.00';
+          subRow.eachCell(c => {
+            c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFDF2F2' } };
+          });
+          filaMoro++;
+          filaMoro++;
+        });
+
+        const totRow = ws3.addRow(['', 'TOTAL GENERAL MOROSIDAD', '', '', '', totalMoraXls, '', '']);
+        totRow.font = { name: 'Arial', size: 10.5, bold: true, color: { argb: 'FFFFFFFF' } };
+        totRow.getCell(6).numFmt = '#,##0.00';
+        totRow.eachCell(c => {
+          c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF991B1B' } };
+        });
+        totRow.height = 22;
       }
 
       const buf = await wb.xlsx.writeBuffer();
@@ -9402,7 +9837,7 @@
           </div>
           <div style="display:flex; gap: 6px; flex-wrap: wrap;">
             <button onclick="window.abrirVisorCalificacionesAdmin('${it.codigo}', '${it.nombre}', '${it.turno}', '${it.idSemestre}', '${it.docente}')" class="btn-secundario" style="flex:1; padding: 6px; font-size: 12px;">Ver Notas</button>
-            <button onclick="window.abrirVisorAsistenciaAdmin('${it.codigo}', '${it.nombre}', '${it.turno}', '${it.idSemestre}')" class="btn-secundario" style="flex:1; padding: 6px; font-size: 12px;">Auditar Asistencia</button>
+            <button onclick="window.abrirVisorAsistenciaAdmin('${it.codigo}', '${it.nombre}', '${it.turno}', '${it.idSemestre}', '${it.docente}')" class="btn-secundario" style="flex:1; padding: 6px; font-size: 12px;">Auditar Asistencia</button>
           </div>
         </div>`;
       });
@@ -9464,13 +9899,45 @@
 
     window.estudiantesAdminAsistenciaCache = [];
 
-    window.abrirVisorAsistenciaAdmin = async function (codigo, nombre, turno, semestreId) {
+    window.abrirVisorAsistenciaAdmin = async function (codigo, nombre, turno, semestreId, docente) {
       document.querySelectorAll('.seccion').forEach(s => s.classList.remove('activa'));
       document.getElementById('seccion-visor-admin-asistencia').classList.add('activa');
       document.getElementById('tituloAdminAsistencia').textContent = 'Auditoría Asistencia: ' + nombre;
       document.getElementById('subtituloAdminAsistencia').textContent = `Cód: ${codigo} · Semestre ${semestreId} · Turno ${turno}`;
 
+      // Resolver docente si no fue proporcionado o viene como 'Sin Asignar'
+      if (!docente || docente === 'undefined' || docente === 'Sin Asignar') {
+        const item = (window.adminAcademicoCache || []).find(it => it.codigo === codigo && it.turno === turno);
+        if (item && item.docente && item.docente !== 'Sin Asignar') {
+          docente = item.docente;
+        }
+      }
+
+      if (!docente || docente === 'undefined' || docente === 'Sin Asignar') {
+        try {
+          const { data: docs } = await supabaseClient.from('docentes').select('nombre_completo, materias_asignadas');
+          if (docs && docs.length > 0) {
+            for (let d of docs) {
+              let asignadas = [];
+              try { asignadas = typeof d.materias_asignadas === 'string' ? JSON.parse(d.materias_asignadas) : (d.materias_asignadas || []); } catch (e) { asignadas = []; }
+              if (Array.isArray(asignadas) && asignadas.some(a => a.codigo === codigo && a.turno === turno)) {
+                docente = d.nombre_completo;
+                break;
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('No se pudo consultar el docente asignado:', e);
+        }
+      }
+
       window.materiaAdminAsistenciaActual = codigo;
+      window.docenteAdminAsistenciaActual = (docente && docente !== 'undefined') ? docente : '';
+
+      const elDocente = document.getElementById('docenteAdminAsistencia');
+      if (elDocente) {
+        elDocente.textContent = (docente && docente !== 'Sin Asignar' && docente !== 'undefined') ? `Docente: ${docente}` : '';
+      }
 
       const tbody = document.getElementById('tablaAdminAsistenciaBody');
       const thead = document.getElementById('tablaAdminAsistenciaHead');
@@ -10568,7 +11035,10 @@
       ws.getCell('A2').alignment = { horizontal: 'center' };
 
       ws.mergeCells(3, 1, 3, cols.length);
-      ws.getCell('A3').value = `${titulo} | ${subtitulo} | Generado por: Administración`;
+      const docenteXls = window.docenteAdminAsistenciaActual || '';
+      const docLabelXls = (docenteXls && docenteXls !== 'Sin Asignar') ? `Docente: ${docenteXls}` : 'Docente: Sin Asignar';
+      ws.getCell('A3').value = `${titulo} | ${subtitulo} | ${docLabelXls} | Generado por: Administración`;
+      ws.getCell('A3').font = { name: 'Arial', size: 10, italic: true };
 
       const headerRow = ws.getRow(5);
       let headerVals = ['#', 'Estudiante'];
@@ -10640,9 +11110,11 @@
       doc.setFontSize(12);
       doc.text(`HISTORIAL DE ASISTENCIA - ${fechaHoy}`, doc.internal.pageSize.getWidth() / 2, 60, { align: "center" });
 
-      doc.setFontSize(10);
+      doc.setFontSize(9);
       doc.setFont("helvetica", "normal");
-      doc.text(`${titulo} | ${subtitulo} | Generado por: Administración`, doc.internal.pageSize.getWidth() / 2, 80, { align: "center" });
+      const docentePdf = window.docenteAdminAsistenciaActual || '';
+      const docLabelPdf = (docentePdf && docentePdf !== 'Sin Asignar') ? `Docente: ${docentePdf}` : 'Docente: Sin Asignar';
+      doc.text(`${titulo} | ${subtitulo} | ${docLabelPdf} | Generado por: Administración`, doc.internal.pageSize.getWidth() / 2, 78, { align: "center" });
 
       let head = [['#', 'Estudiante']];
       fechasArray.forEach(f => {
