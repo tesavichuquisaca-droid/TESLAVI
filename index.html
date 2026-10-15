@@ -3181,7 +3181,7 @@
             <div class="form-card" style="max-width: 1000px;">
               <div class="form-section-header"
                 style="margin-bottom: 16px; border-bottom: 1px solid var(--borde); padding-bottom: 16px; display:flex; justify-content:space-between; align-items:center;">
-                <h3>Morosidad (pendientes)</h3>
+                <h3>Morosidad (solo morosos)</h3>
                 <div style="display:flex; gap:8px;">
                   <button type="button" class="tab-btn" onclick="window.exportarPdfMorosidad()"
                     style="border:1px solid var(--borde); border-radius:var(--radio); padding:6px 14px;">PDF</button>
@@ -7932,24 +7932,26 @@
       const cont = document.getElementById('reportesMorosidad');
       const [{ data, error }, { data: estData }] = await Promise.all([
         supabaseClient.from('vista_estado_financiero_estudiante').select('*').gt('saldo', 0).order('saldo', { ascending: false }),
-        supabaseClient.from('estudiantes').select('id, semestre, turno')
+        supabaseClient.from('estudiantes').select('id, semestre, turno, estado_financiero')
       ]);
 
-      if (error || !data || data.length === 0) {
-        cont.innerHTML = '<p style="color:var(--texto-suave); padding: 16px 0;">Sin estudiantes con saldo pendiente.</p>';
-        window.moroCache = [];
-        return;
-      }
-
+      // Solo estudiantes en estado MOROSO (no Al día ni Atrasado).
       const mapEst = new Map((estData || []).map(e => [e.id, e]));
-      const morosos = data.map(m => {
+      const morosos = (data || []).map(m => {
         const est = mapEst.get(m.estudiante_id) || {};
         return {
           ...m,
+          estado_financiero: est.estado_financiero || m.estado_financiero,
           semestre: est.semestre != null ? est.semestre : null,
           turno: est.turno || 'Sin Turno'
         };
-      });
+      }).filter(m => m.estado_financiero === 'MOROSO');
+
+      if (error || morosos.length === 0) {
+        cont.innerHTML = '<p style="color:var(--texto-suave); padding: 16px 0;">No hay estudiantes morosos.</p>';
+        window.moroCache = [];
+        return;
+      }
 
       window.moroCache = morosos;
 
@@ -7970,7 +7972,7 @@
       let html = `
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px; padding:12px 16px; background:var(--fondo, #f8fafc); border:1px solid var(--borde); border-radius:var(--radio);">
           <div style="font-size:13px; color:var(--texto-suave);">
-            Total con saldo pendiente: <strong style="color:var(--texto);">${morosos.length}</strong> estudiante(s) en <strong style="color:var(--texto);">${gruposOrdenados.length}</strong> curso(s)
+            Total morosos: <strong style="color:var(--texto);">${morosos.length}</strong> estudiante(s) en <strong style="color:var(--texto);">${gruposOrdenados.length}</strong> curso(s)
           </div>
           <div style="font-size:14px; font-weight:700; color:var(--error-texto, #d32f2f);">
             Deuda total acumulada: ${bs(totalMora)}
