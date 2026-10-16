@@ -681,6 +681,53 @@
       font-weight: 500;
       color: var(--texto-suave);
     }
+
+    /* ---- Bloqueo de Notas ---- */
+    .bloqueo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: var(--e-6);
+      max-width: 900px;
+    }
+    .bloqueo-card {
+      background: var(--superficie);
+      border: 1px solid var(--borde);
+      border-radius: var(--r-md);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      border-top: 4px solid var(--verde-vivo-texto);
+    }
+    .bloqueo-card.bloqueado { border-top-color: var(--error-texto); }
+    .bloqueo-card h3 { margin: 0; font-family: var(--f-display); font-size: 16px; color: var(--verde-950); }
+    .bloqueo-card .rango { font-size: 12px; color: var(--texto-suave); margin-top: 2px; }
+    .bloqueo-estado {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 10px; border-radius: 100px; font-size: 12px; font-weight: 700;
+      background: #E4EFE9; color: var(--verde-800); align-self: flex-start;
+    }
+    .bloqueado .bloqueo-estado { background: #FBEAE9; color: var(--error-texto); }
+    .interruptor-fila { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 14px; font-weight: 600; color: var(--texto); cursor: pointer; }
+    .interruptor { position: relative; width: 50px; height: 28px; flex-shrink: 0; }
+    .interruptor input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .interruptor .pista {
+      position: absolute; inset: 0; border-radius: 100px;
+      background: var(--tinta-200, #CBD5E1); transition: background .2s ease;
+    }
+    .interruptor .pista::after {
+      content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px;
+      border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25);
+      transition: transform .2s ease;
+    }
+    .interruptor input:checked + .pista { background: var(--error-texto); }
+    .interruptor input:checked + .pista::after { transform: translateX(22px); }
+    .interruptor input:focus-visible + .pista { outline: 2px solid var(--verde-vivo-texto); outline-offset: 2px; }
+    .interruptor input:disabled + .pista { opacity: .5; }
+    .bloqueo-fecha label { font-size: 12.5px; font-weight: 500; color: var(--tinta-700); display: block; margin-bottom: 6px; }
+    .bloqueo-fecha .fila { display: flex; gap: 8px; }
+    .bloqueo-fecha input { flex: 1; min-width: 0; }
+    .bloqueo-fecha .ayuda { font-size: 12px; color: var(--texto-suave); margin-top: 6px; }
   </style>
   <!-- Librería Chart.js para Estadísticas -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -851,6 +898,16 @@
             </svg> <span
               style="font-family: var(--f-datos); color: var(--verde-600); opacity: 0.7; margin-right: 8px; font-size: 13px;">05</span>
             Notas y Asistencia
+          </div>
+
+          <div class="menu-item" id="menu-admin-bloqueo-notas" onclick="cambiarSeccion('seccion-bloqueo-notas', this)">
+            <svg class="ui-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg> <span
+              style="font-family: var(--f-datos); color: var(--verde-600); opacity: 0.7; margin-right: 8px; font-size: 13px;">05B</span>
+            Bloqueo de Notas
           </div>
 
           <div class="menu-item" id="menu-admin-estadisticas" onclick="cambiarSeccion('seccion-estadisticas', this)">
@@ -1839,6 +1896,27 @@
             </div>
 
             <div id="contenedorAdminAcademico" class="form-grid-2"></div>
+          </div>
+
+          <!-- SECCIÓN: BLOQUEO DE NOTAS — cierra la carga de notas del
+               docente por trimestre (interruptor o fecha programada).
+               Guarda en la misma fila de config_trimestres. -->
+          <div id="seccion-bloqueo-notas" class="seccion">
+            <h1 class="header-title">Bloqueo de Notas</h1>
+            <p class="header-desc">Cerrá la carga de notas de los docentes por trimestre. Con el trimestre bloqueado,
+              el docente puede ver las notas pero no puede cambiarlas ni guardarlas. Aplica a todas las materias.</p>
+
+            <div id="bloqueoNotasTarjetas" class="bloqueo-grid"></div>
+
+            <div class="form-card" style="max-width: 900px; margin-top: var(--e-6);">
+              <div class="form-section-body" style="font-size: 13px; color: var(--texto-suave); line-height: 1.6;">
+                <strong style="color: var(--texto);">¿Cómo funciona?</strong><br>
+                • <strong>Interruptor:</strong> lo encendés y el trimestre queda bloqueado al instante.<br>
+                • <strong>Bloquear desde (fecha):</strong> el trimestre se bloquea solo a partir de ese día, aunque el
+                interruptor esté apagado. Para volver a abrirlo, borrá la fecha.<br>
+                • Si el docente tiene la página abierta, el bloqueo se revisa otra vez al momento de guardar.
+              </div>
+            </div>
           </div>
 
           <!-- SECCIÓN: MATERIAS -->
@@ -3898,12 +3976,13 @@
     // Secciones del sidebar gateadas por permisos_rol — el nombre acá
     // es idSeccion sin el prefijo "seccion-". Lo que no está en esta
     // lista (ej. seccion-inicio, o visores internos) no se filtra.
-    const SECCIONES_CON_PERMISO = ['estudiantes', 'docentes', 'materias', 'admin-academico',
+    const SECCIONES_CON_PERMISO = ['estudiantes', 'docentes', 'materias', 'admin-academico', 'bloqueo-notas',
       'estadisticas', 'centralizador', 'libretas', 'finanzas-dashboard', 'financiero',
       'cobranza', 'caja', 'reportes-financieros', 'gastos-institucionales'];
     const MENU_ID_POR_SECCION = {
       'estudiantes': 'menu-admin-estudiantes', 'docentes': 'menu-admin-docentes',
       'materias': 'menu-admin-materias', 'admin-academico': 'menu-admin-academico',
+      'bloqueo-notas': 'menu-admin-bloqueo-notas',
       'estadisticas': 'menu-admin-estadisticas', 'centralizador': 'menu-admin-centralizador',
       'libretas': 'menu-admin-libretas', 'finanzas-dashboard': 'menu-admin-finanzas-dashboard',
       'financiero': 'menu-admin-financiero', 'cobranza': 'menu-admin-cobranza',
@@ -4002,6 +4081,7 @@
       'seccion-docentes': 'Docentes',
       'seccion-materias': 'Materias',
       'seccion-admin-academico': 'Notas y Asistencia',
+      'seccion-bloqueo-notas': 'Bloqueo de Notas',
       'seccion-estadisticas': 'Estadísticas y Analítica',
       'seccion-centralizador': 'Centralizador',
       'seccion-libretas': 'Libretas',
@@ -4051,6 +4131,9 @@
       // Cargar datos bajo demanda si corresponden a la sección
       if (idSeccion === 'seccion-admin-academico' && typeof window.cargarAdminAcademico === 'function') {
         window.cargarAdminAcademico();
+      }
+      if (idSeccion === 'seccion-bloqueo-notas' && typeof window.cargarBloqueoNotas === 'function') {
+        window.cargarBloqueoNotas();
       }
       if (idSeccion === 'seccion-docentes' && typeof window.cargarDocentes === 'function') {
         window.cargarDocentes();
@@ -4332,7 +4415,7 @@
         }).eq('id', 1);
         if (error) throw error;
 
-        window.cfgTrimestres = { t1_inicio, t1_fin, t2_inicio, t2_fin };
+        window.cfgTrimestres = { ...(window.cfgTrimestres || {}), t1_inicio, t1_fin, t2_inicio, t2_fin };
         aplicarCfgTrimestresATodosLosFormularios();
         msg.className = 'mensaje visible';
         msg.style.background = '#E4EFE9';
@@ -4352,6 +4435,128 @@
       } finally {
         btn.disabled = false;
       }
+    };
+
+    // ==========================================
+    // BLOQUEO DE NOTAS POR TRIMESTRE
+    // Una parte queda bloqueada si el interruptor está encendido o si
+    // ya llegó la fecha "bloquear desde". docente.html usa la misma regla.
+    // ==========================================
+    const PARTES_BLOQUEO = [
+      { clave: 't1', titulo: 'Trimestre 1', ini: 't1_inicio', fin: 't1_fin' },
+      { clave: 't2', titulo: 'Trimestre 2', ini: 't2_inicio', fin: 't2_fin' },
+      { clave: 'rec', titulo: 'Recuperatorio', ini: null, fin: null }
+    ];
+
+    function hoyISO() {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+    function fmtFechaCorta(iso) {
+      if (!iso) return '';
+      const [y, m, d] = String(iso).slice(0, 10).split('-');
+      return `${d}/${m}/${y}`;
+    }
+
+    window.parteBloqueada = function (cfg, clave) {
+      if (!cfg) return false;
+      if (cfg[clave + '_bloqueado']) return true;
+      const desde = cfg[clave + '_bloqueo_desde'];
+      return !!(desde && hoyISO() >= String(desde).slice(0, 10));
+    };
+
+    window.cargarBloqueoNotas = async function () {
+      const cont = document.getElementById('bloqueoNotasTarjetas');
+      cont.innerHTML = '<p style="color:var(--texto-suave);">Cargando...</p>';
+      await window.cargarConfigTrimestres();
+      window.renderizarBloqueoNotas();
+    };
+
+    window.renderizarBloqueoNotas = function () {
+      const cfg = window.cfgTrimestres || {};
+      const cont = document.getElementById('bloqueoNotasTarjetas');
+      if (!('t1_bloqueado' in cfg)) {
+        cont.innerHTML = '<div class="form-card" style="color:var(--error-texto); font-size:13.5px;">Falta ejecutar la migración <strong>031_bloqueo_notas_trimestre.sql</strong> en Supabase (SQL Editor) para activar el bloqueo de notas.</div>';
+        return;
+      }
+      cont.innerHTML = PARTES_BLOQUEO.map(p => {
+        const bloqueado = window.parteBloqueada(cfg, p.clave);
+        const manual = !!cfg[p.clave + '_bloqueado'];
+        const desde = cfg[p.clave + '_bloqueo_desde'] ? String(cfg[p.clave + '_bloqueo_desde']).slice(0, 10) : '';
+        let motivo = 'Los docentes pueden cargar notas.';
+        if (manual) motivo = 'Bloqueado con el interruptor.';
+        else if (bloqueado) motivo = `Bloqueado por fecha desde el ${fmtFechaCorta(desde)}.`;
+        else if (desde) motivo = `Abierto. Se bloquea solo el ${fmtFechaCorta(desde)}.`;
+        const rango = p.ini
+          ? (cfg[p.ini] && cfg[p.fin] ? `Del ${fmtFechaCorta(cfg[p.ini])} al ${fmtFechaCorta(cfg[p.fin])}` : 'Fechas del trimestre sin configurar')
+          : 'Nota de recuperación del semestre';
+        return `
+          <div class="bloqueo-card ${bloqueado ? 'bloqueado' : ''}">
+            <div>
+              <h3>${p.titulo}</h3>
+              <div class="rango">${rango}</div>
+            </div>
+            <span class="bloqueo-estado">${bloqueado ? '🔒 Bloqueado' : '🔓 Abierto'}</span>
+            <div style="font-size:12.5px; color:var(--texto-suave); margin-top:-8px;">${motivo}</div>
+            <label class="interruptor-fila">
+              <span>Bloquear ahora</span>
+              <span class="interruptor">
+                <input type="checkbox" id="bloqSwitch_${p.clave}" ${manual ? 'checked' : ''} onchange="window.cambiarInterruptorBloqueo('${p.clave}', this)">
+                <span class="pista"></span>
+              </span>
+            </label>
+            <div class="campo bloqueo-fecha" style="margin:0;">
+              <label for="bloqFecha_${p.clave}">Bloquear automáticamente desde</label>
+              <div class="fila">
+                <input type="date" id="bloqFecha_${p.clave}" value="${desde}">
+                <button type="button" class="tab-btn" style="border:1px solid var(--borde); border-radius:var(--radio); padding:6px 12px;" onclick="window.guardarFechaBloqueo('${p.clave}', false)">Guardar</button>
+                ${desde ? `<button type="button" class="tab-btn" style="border:1px solid var(--borde); border-radius:var(--radio); padding:6px 12px;" onclick="window.guardarFechaBloqueo('${p.clave}', true)">Quitar</button>` : ''}
+              </div>
+              ${p.fin ? `<div class="ayuda">Sugerido: el día siguiente al fin del trimestre.</div>` : ''}
+            </div>
+          </div>`;
+      }).join('');
+    };
+
+    async function guardarBloqueo(cambios, textoAuditoria) {
+      const { data: userData } = await supabaseClient.auth.getUser();
+      const { error } = await supabaseClient.from('config_trimestres').update({
+        ...cambios,
+        actualizado_en: new Date().toISOString(),
+        actualizado_por: userData?.user?.id || null
+      }).eq('id', 1);
+      if (error) throw error;
+      window.cfgTrimestres = { ...(window.cfgTrimestres || {}), ...cambios };
+      try { await window.registrarAuditoria(textoAuditoria, 'Bloqueo de Notas'); } catch (e) { }
+    }
+
+    window.cambiarInterruptorBloqueo = async function (clave, inputEl) {
+      const titulo = PARTES_BLOQUEO.find(p => p.clave === clave).titulo;
+      const valor = inputEl.checked;
+      inputEl.disabled = true;
+      try {
+        await guardarBloqueo({ [clave + '_bloqueado']: valor }, `${valor ? 'Bloqueó' : 'Desbloqueó'} la carga de notas: ${titulo}`);
+        window.toast(`${titulo}: ${valor ? 'bloqueado' : 'desbloqueado'}.`, 'success');
+      } catch (err) {
+        console.error(err);
+        inputEl.checked = !valor;
+        window.toast('No se pudo guardar: ' + err.message, 'error');
+      }
+      window.renderizarBloqueoNotas();
+    };
+
+    window.guardarFechaBloqueo = async function (clave, quitar) {
+      const titulo = PARTES_BLOQUEO.find(p => p.clave === clave).titulo;
+      const fecha = quitar ? null : (document.getElementById('bloqFecha_' + clave).value || null);
+      try {
+        await guardarBloqueo({ [clave + '_bloqueo_desde']: fecha },
+          fecha ? `Programó bloqueo de notas de ${titulo} desde ${fmtFechaCorta(fecha)}` : `Quitó la fecha de bloqueo de notas de ${titulo}`);
+        window.toast(fecha ? `${titulo}: se bloquea desde el ${fmtFechaCorta(fecha)}.` : `${titulo}: fecha de bloqueo quitada.`, 'success');
+      } catch (err) {
+        console.error(err);
+        window.toast('No se pudo guardar: ' + err.message, 'error');
+      }
+      window.renderizarBloqueoNotas();
     };
 
     window.docentesDataCache = [];

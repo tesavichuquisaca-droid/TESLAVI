@@ -224,7 +224,7 @@
         <main class="content-area">
 
           <h1 class="header-title">Usuarios y Permisos</h1>
-          <p class="header-desc">Crear cuentas nuevas (Director, Secretaria, Cajero, Admin...) y elegir qué secciones del menú ve cada rol.</p>
+          <p class="header-desc">Crear cuentas nuevas (Rector, Director, Secretaria, Contador, Cajero, Admin...) y elegir qué secciones del menú ve cada rol.</p>
 
           <div id="usuariosSinAcceso" class="form-card" style="max-width: 700px; display:none;">
             <div class="form-section-body">
@@ -248,8 +248,10 @@
                   <div class="campo">
                     <label for="nuGestionRol">Rol</label>
                     <select id="nuGestionRol" class="select-css">
+                      <option value="Rector">Rector</option>
                       <option value="Director">Director</option>
                       <option value="Secretaria">Secretaria</option>
+                      <option value="Contador">Contador</option>
                       <option value="Cajero">Cajero</option>
                       <option value="Admin">Admin</option>
                       <option value="SuperAdmin">Admin Total</option>
@@ -283,8 +285,10 @@
                       <option value="Todos">Todos los roles</option>
                       <option value="SuperAdmin">Admin Total</option>
                       <option value="Admin">Admin</option>
+                      <option value="Rector">Rector</option>
                       <option value="Director">Director</option>
                       <option value="Secretaria">Secretaria</option>
+                      <option value="Contador">Contador</option>
                       <option value="Cajero">Cajero</option>
                     </select>
                   </div>
@@ -389,12 +393,12 @@
     // Secciones gateadas por permisos_rol — mismo set que SECCIONES_CON_PERMISO
     // en index.html (§3147 al momento de escribir esto). Si se agrega una
     // sección nueva al sidebar del panel admin, agregarla acá también.
-    const SECCIONES_CON_PERMISO = ['estudiantes', 'docentes', 'materias', 'admin-academico',
+    const SECCIONES_CON_PERMISO = ['estudiantes', 'docentes', 'materias', 'admin-academico', 'bloqueo-notas',
       'estadisticas', 'centralizador', 'libretas', 'finanzas-dashboard', 'financiero',
       'cobranza', 'caja', 'reportes-financieros', 'gastos-institucionales'];
     const ETIQUETA_POR_SECCION = {
       'estudiantes': 'Estudiantes', 'docentes': 'Docentes', 'materias': 'Materias',
-      'admin-academico': 'Notas y Asistencia', 'estadisticas': 'Estadísticas y Analítica',
+      'admin-academico': 'Notas y Asistencia', 'bloqueo-notas': 'Bloqueo de Notas', 'estadisticas': 'Estadísticas y Analítica',
       'centralizador': 'Centralizador', 'libretas': 'Libretas',
       'finanzas-dashboard': 'Dashboard Financiero', 'financiero': 'Financiero',
       'cobranza': 'Financiero / Cobranza', 'caja': 'Financiero / Caja',
@@ -460,11 +464,11 @@
     // ==========================================
     // USUARIOS Y PERMISOS (solo SuperAdmin)
     // ==========================================
-    const ROLES_STAFF = ['SuperAdmin', 'Admin', 'Director', 'Secretaria', 'Cajero'];
-    const NOMBRE_ROL = { SuperAdmin: 'Admin Total', Admin: 'Admin', Director: 'Director', Secretaria: 'Secretaria', Cajero: 'Cajero' };
+    const ROLES_STAFF = ['SuperAdmin', 'Admin', 'Rector', 'Director', 'Secretaria', 'Contador', 'Cajero'];
+    const NOMBRE_ROL = { SuperAdmin: 'Admin Total', Admin: 'Admin', Rector: 'Rector', Director: 'Director', Secretaria: 'Secretaria', Contador: 'Contador', Cajero: 'Cajero' };
     // Roles a los que se les puede tocar la grilla de permisos —
     // Admin/SuperAdmin quedan afuera porque siempre ven todo.
-    const ROLES_CON_PERMISOS_EDITABLES = ['Director', 'Secretaria', 'Cajero'];
+    const ROLES_CON_PERMISOS_EDITABLES = ['Rector', 'Director', 'Secretaria', 'Contador', 'Cajero'];
 
     window.usuariosCache = [];
     window.permisosRolCache = {}; // { rol: Set(secciones) }

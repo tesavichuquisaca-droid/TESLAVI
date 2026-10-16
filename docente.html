@@ -296,10 +296,14 @@
                    <button onclick="window.volverMenuDocente()" class="btn-secundario" style="padding:8px 16px; margin-left: 8px;">Volver</button>
                 </div>
             </div>
+            <!-- Aviso de bloqueo de notas (lo maneja Administración en
+                 index.html → Bloqueo de Notas) -->
+            <div id="avisoBloqueoNotas" role="status"
+              style="display:none; margin-top:20px; background:#FBEAE9; color:var(--error-texto); border:1px solid rgba(167,41,31,.2); border-radius:var(--radio); padding:10px 14px; font-size:13.5px; line-height:1.5;"></div>
             <div class="tabs-container" style="margin-top:24px;">
                <button class="tab-btn active" id="tabBtnCalificarT1" onclick="window.cambiarTabCalificar('tab-calificar-t1', this)">Trimestre 1</button>
-               <button class="tab-btn" onclick="window.cambiarTabCalificar('tab-calificar-t2', this)">Trimestre 2</button>
-               <button class="tab-btn" onclick="window.cambiarTabCalificar('tab-calificar-resumen', this)">Resumen y Recuperatorio</button>
+               <button class="tab-btn" id="tabBtnCalificarT2" onclick="window.cambiarTabCalificar('tab-calificar-t2', this)">Trimestre 2</button>
+               <button class="tab-btn" id="tabBtnCalificarRes" onclick="window.cambiarTabCalificar('tab-calificar-resumen', this)">Resumen y Recuperatorio</button>
             </div>
 
             <div id="tab-calificar-t1" class="vista-tab activa">
@@ -898,7 +902,8 @@
       const cargando = '<tr><td colspan="8" style="text-align: center; color: var(--texto-suave); padding: 32px 0;">Cargando estudiantes...</td></tr>';
       ['tablaT1Body', 'tablaT2Body', 'tablaResumenBody'].forEach(id => document.getElementById(id).innerHTML = cargando);
 
-      if (!window.cfgTrimestres) await window.cargarConfigTrimestres();
+      // Siempre se relee: el bloqueo de notas puede cambiar en cualquier momento.
+      await window.cargarConfigTrimestres();
 
       const { data, error } = await supabaseClient.from("estudiantes").select("*").or(`and(semestre.eq.${semestreId},turno.eq.${turno}),materias_arrastre.ilike.%|${codigo}@${turno}|%`).order("apellidos", { ascending: true });
 
@@ -972,7 +977,52 @@
       document.getElementById('tablaT1Body').innerHTML = htmlT1;
       document.getElementById('tablaT2Body').innerHTML = htmlT2;
       document.getElementById('tablaResumenBody').innerHTML = htmlResumen;
+      window.aplicarBloqueoNotas();
       window.actualizarBandaCalibre();
+    };
+
+    /* ---- Bloqueo de notas por trimestre (index.html → Bloqueo de Notas).
+       Bloqueado = interruptor encendido o ya llegó la fecha "bloquear desde". */
+    function hoyISO() {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+    window.parteBloqueada = function (cfg, clave) {
+      if (!cfg) return false;
+      if (cfg[clave + '_bloqueado']) return true;
+      const desde = cfg[clave + '_bloqueo_desde'];
+      return !!(desde && hoyISO() >= String(desde).slice(0, 10));
+    };
+    const NOMBRE_PARTE = { t1: 'Trimestre 1', t2: 'Trimestre 2', rec: 'Recuperatorio' };
+
+    window.aplicarBloqueoNotas = function () {
+      const cfg = window.cfgTrimestres || {};
+      const bloq = { t1: window.parteBloqueada(cfg, 't1'), t2: window.parteBloqueada(cfg, 't2'), rec: window.parteBloqueada(cfg, 'rec') };
+
+      document.querySelectorAll('#tablaT1Body .nota-cruda-input').forEach(i => { i.disabled = bloq.t1; });
+      document.querySelectorAll('#tablaT2Body .nota-cruda-input').forEach(i => { i.disabled = bloq.t2; });
+      if (bloq.rec) document.querySelectorAll('#tablaResumenBody .rec-input').forEach(i => { i.disabled = true; });
+
+      const marcar = (id, clave, texto) => {
+        const b = document.getElementById(id);
+        if (b) b.textContent = (bloq[clave] ? '🔒 ' : '') + texto;
+      };
+      marcar('tabBtnCalificarT1', 't1', 'Trimestre 1');
+      marcar('tabBtnCalificarT2', 't2', 'Trimestre 2');
+      marcar('tabBtnCalificarRes', 'rec', 'Resumen y Recuperatorio');
+
+      const bloqueadas = Object.keys(bloq).filter(k => bloq[k]).map(k => NOMBRE_PARTE[k]);
+      const aviso = document.getElementById('avisoBloqueoNotas');
+      if (bloqueadas.length) {
+        aviso.innerHTML = `<strong>Carga de notas cerrada:</strong> ${bloqueadas.join(', ')}. Podés ver las notas pero no cambiarlas. Si necesitás corregir algo, pedilo a Administración.`;
+        aviso.style.display = 'block';
+      } else {
+        aviso.style.display = 'none';
+      }
+
+      const btnGuardar = document.getElementById('btnGuardarNotas');
+      if (btnGuardar) btnGuardar.disabled = bloq.t1 && bloq.t2 && bloq.rec;
+      return bloq;
     };
 
     /* Banda de calibre (§3.3): alumnos con Nota Final cargada / total,
@@ -1080,7 +1130,7 @@
       trResumen.querySelector('.resumen-semestral-text').textContent = fmtNum(semestral);
 
       const recInput = trResumen.querySelector('.rec-input');
-      recInput.disabled = !habilita;
+      recInput.disabled = !habilita || window.parteBloqueada(window.cfgTrimestres, 'rec');
       if (!habilita) {
         recInput.value = '';
       } else if (recInput.value !== '') {
@@ -1109,6 +1159,16 @@
       const codigo = window.materiaCalificacionActual;
       const updates = [];
 
+      // Se vuelve a consultar el bloqueo justo antes de guardar, por si
+      // Administración lo cerró mientras el docente tenía la página abierta.
+      await window.cargarConfigTrimestres();
+      const bloq = window.aplicarBloqueoNotas();
+      if (bloq.t1 && bloq.t2 && bloq.rec) {
+        window.toast('La carga de notas está cerrada para todos los trimestres. No se guardó nada.', 'error');
+        btn.textContent = "Guardar Notas";
+        return;
+      }
+
       window.estudiantesCalificacionCache.forEach(est => {
         const trT1 = document.querySelector(`#tablaT1Body tr[data-id="${est.id}"]`);
         const trT2 = document.querySelector(`#tablaT2Body tr[data-id="${est.id}"]`);
@@ -1134,7 +1194,14 @@
 
         let calObj = {};
         try { if (est.calificaciones) calObj = typeof est.calificaciones === 'string' ? JSON.parse(est.calificaciones) : est.calificaciones; } catch (e) { }
-        calObj[codigo] = { t1, t2, recuperatorio };
+        // Lo bloqueado queda exactamente como estaba guardado.
+        const previo = calObj[codigo] || {};
+        calObj[codigo] = {
+          ...previo,
+          t1: bloq.t1 ? previo.t1 : t1,
+          t2: bloq.t2 ? previo.t2 : t2,
+          recuperatorio: bloq.rec ? (previo.recuperatorio ?? null) : recuperatorio
+        };
 
         updates.push(supabaseClient.from("estudiantes").update({ calificaciones: calObj }).eq("id", est.id));
         est.calificaciones = calObj;
@@ -1145,7 +1212,12 @@
         await window.registrarAuditoria(`Guardó/actualizó calificaciones (T1/T2/Recuperatorio)`, `Materia: ${codigo}`);
         btn.textContent = "¡Notas Guardadas!";
         btn.style.background = "var(--verde-700)";
-        setTimeout(() => { btn.textContent = "Guardar Notas"; btn.style.background = ""; btn.disabled = false; }, 2000);
+        // Si algo estaba bloqueado, se redibuja para mostrar lo que quedó guardado.
+        if (bloq.t1 || bloq.t2 || bloq.rec) {
+          window.renderizarTablaCalificaciones();
+          window.toast('Se guardó solo lo abierto. Lo bloqueado no se modificó.', 'info');
+        }
+        setTimeout(() => { btn.textContent = "Guardar Notas"; btn.style.background = ""; btn.disabled = false; window.aplicarBloqueoNotas(); }, 2000);
       } catch (err) {
         window.toast('Hubo un error al guardar las notas: ' + err.message, 'error');
         btn.textContent = "Guardar Notas";
