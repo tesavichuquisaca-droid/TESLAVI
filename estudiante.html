@@ -406,13 +406,13 @@
         <div class="mensaje-error" id="mensajeError" role="alert"></div>
         <form id="formLoginEstudiante" novalidate>
           <div class="campo">
-            <label for="ciInput">Carnet de identidad</label>
+            <label for="ciInput">Carnet de identidad (solo números)</label>
             <input type="text" id="ciInput" inputmode="numeric" autocomplete="username" maxlength="15" required placeholder="Ej. 10695420">
           </div>
           <div class="campo">
             <label for="passInput">Contraseña</label>
             <input type="password" id="passInput" autocomplete="current-password" required placeholder="Tu carnet + teslavi">
-            <div class="ayuda">Tu contraseña es tu carnet seguido de "teslavi". Ejemplo: si tu carnet es 10695420, tu contraseña es <strong>10695420teslavi</strong>.</div>
+            <div class="ayuda">Tu contraseña es el número de tu carnet (sin extensión ni complemento) seguido de "teslavi". Ejemplo: si tu carnet es 10695420, tu contraseña es <strong>10695420teslavi</strong>.</div>
           </div>
           <button type="submit" class="btn" id="btnEntrar">
             <span class="spinner oculto" id="spinnerLogin"></span>
@@ -643,9 +643,16 @@
       e.preventDefault();
       ocultarError();
 
-      const ci = document.getElementById('ciInput').value.trim();
+      // Solo cuenta la parte numérica del carnet: "10695420 LP" o
+      // "10695420-1A" → "10695420", tanto lo que escribe el estudiante
+      // como lo guardado en la base.
+      const soloNumeroCi = v => ((String(v || '').match(/\d+/) || [''])[0]);
+      const ci = soloNumeroCi(document.getElementById('ciInput').value);
       const pass = document.getElementById('passInput').value.trim();
-      if (!ci || !pass) return;
+      if (!ci || !pass) {
+        if (!ci && document.getElementById('ciInput').value.trim()) mostrarError('Ingresá solo los números de tu carnet.');
+        return;
+      }
 
       const btn = document.getElementById('btnEntrar');
       const spinner = document.getElementById('spinnerLogin');
@@ -655,13 +662,14 @@
       txt.textContent = 'Verificando...';
 
       try {
-        const { data: est, error } = await supabaseClient
+        const { data: candidatos, error } = await supabaseClient
           .from('estudiantes')
           .select('id, nombres, apellidos, ci, semestre, turno, calificaciones, asistencias, materias_arrastre, estado_financiero, password_custom')
-          .eq('ci', ci)
-          .maybeSingle();
+          .like('ci', `%${ci}%`);
 
         if (error) throw error;
+
+        const est = (candidatos || []).find(c => soloNumeroCi(c.ci) === ci) || null;
 
         if (!est) {
           mostrarError('No encontramos ese número de carnet. Verificá el dato o pasa por Administración.');
@@ -676,7 +684,7 @@
         const tieneClavePropia = est.password_custom && est.password_custom.trim().length > 0;
         const passValida = tieneClavePropia
           ? pass === est.password_custom
-          : pass.toLowerCase() === (String(est.ci).trim() + 'teslavi').toLowerCase();
+          : pass.toLowerCase() === (ci + 'teslavi');
 
         if (!passValida) {
           mostrarError(tieneClavePropia
