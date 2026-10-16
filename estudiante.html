@@ -123,6 +123,27 @@
       outline-offset: 2px;
     }
 
+    /* Ojito para mostrar/ocultar la contraseña */
+    .campo-clave { position: relative; }
+    .campo-clave input { padding-right: 48px; width: 100%; box-sizing: border-box; }
+    .btn-ojo {
+      position: absolute;
+      top: 0;
+      right: 0;
+      height: 100%;
+      width: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: none;
+      border: none;
+      color: var(--tinta-500);
+      cursor: pointer;
+      border-radius: var(--radio);
+    }
+    .btn-ojo:hover { color: var(--verde-950); }
+    .btn-ojo:focus-visible { outline: 2px solid var(--verde-vivo-texto); outline-offset: -2px; }
+
     .campo .ayuda {
       font-size: 12px;
       color: var(--texto-suave);
@@ -411,7 +432,10 @@
           </div>
           <div class="campo">
             <label for="passInput">Contraseña</label>
-            <input type="password" id="passInput" autocomplete="current-password" required placeholder="Tu carnet + teslavi">
+            <div class="campo-clave">
+              <input type="password" id="passInput" autocomplete="current-password" required placeholder="Tu carnet + teslavi">
+              <button type="button" class="btn-ojo" data-ojo="passInput" aria-label="Mostrar contraseña"></button>
+            </div>
             <div class="ayuda">Tu contraseña es el número de tu carnet (sin extensión ni complemento) seguido de "teslavi". Ejemplo: si tu carnet es 10695420, tu contraseña es <strong>10695420teslavi</strong>.</div>
           </div>
           <button type="submit" class="btn" id="btnEntrar">
@@ -440,11 +464,17 @@
           <div class="mensaje-exito" id="mensajeExitoClave" role="status" aria-live="polite"></div>
           <div class="campo">
             <label for="claveNueva1">Nueva contraseña</label>
-            <input type="password" id="claveNueva1" autocomplete="new-password" placeholder="Mínimo 6 caracteres">
+            <div class="campo-clave">
+              <input type="password" id="claveNueva1" autocomplete="new-password" placeholder="Mínimo 6 caracteres">
+              <button type="button" class="btn-ojo" data-ojo="claveNueva1" aria-label="Mostrar contraseña"></button>
+            </div>
           </div>
           <div class="campo">
             <label for="claveNueva2">Repetir nueva contraseña</label>
-            <input type="password" id="claveNueva2" autocomplete="new-password">
+            <div class="campo-clave">
+              <input type="password" id="claveNueva2" autocomplete="new-password">
+              <button type="button" class="btn-ojo" data-ojo="claveNueva2" aria-label="Mostrar contraseña"></button>
+            </div>
           </div>
           <button type="button" class="btn" id="btnGuardarClave" onclick="window.guardarNuevaClave()">Guardar nueva contraseña</button>
         </div>
@@ -579,6 +609,7 @@
     window.cerrarSesionEstudiante = function () {
       window.estudianteSesionActual = null;
       document.getElementById('formLoginEstudiante').reset();
+      window.ocultarClaves();
       document.getElementById('zonaClaveEst').classList.add('oculto');
       document.getElementById('panelClaveEst').classList.add('oculto');
       document.getElementById('claveNueva1').value = '';
@@ -639,6 +670,30 @@
       }
     };
 
+    // Ojitos: mostrar/ocultar contraseña
+    const ICONO_OJO = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+    const ICONO_OJO_TACHADO = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+    function pintarOjo(btn) {
+      const visible = document.getElementById(btn.dataset.ojo).type === 'text';
+      btn.innerHTML = visible ? ICONO_OJO_TACHADO : ICONO_OJO;
+      btn.setAttribute('aria-label', visible ? 'Ocultar contraseña' : 'Mostrar contraseña');
+    }
+    document.querySelectorAll('.btn-ojo').forEach(btn => {
+      pintarOjo(btn);
+      btn.addEventListener('click', () => {
+        const input = document.getElementById(btn.dataset.ojo);
+        input.type = input.type === 'password' ? 'text' : 'password';
+        pintarOjo(btn);
+        input.focus();
+      });
+    });
+    window.ocultarClaves = function () {
+      document.querySelectorAll('.btn-ojo').forEach(btn => {
+        document.getElementById(btn.dataset.ojo).type = 'password';
+        pintarOjo(btn);
+      });
+    };
+
     document.getElementById('formLoginEstudiante').addEventListener('submit', async function (e) {
       e.preventDefault();
       ocultarError();
@@ -646,9 +701,14 @@
       // Solo cuenta la parte numérica del carnet: "10695420 LP" o
       // "10695420-1A" → "10695420", tanto lo que escribe el estudiante
       // como lo guardado en la base.
-      const soloNumeroCi = v => ((String(v || '').match(/\d+/) || [''])[0]);
+      // Se corta en el primer espacio, guion o letra y se quitan puntos
+      // ("4.115.496" → "4115496").
+      const soloNumeroCi = v => String(v || '').trim().split(/[\s\-A-Za-z]/)[0].replace(/\D/g, '');
       const ci = soloNumeroCi(document.getElementById('ciInput').value);
       const pass = document.getElementById('passInput').value.trim();
+      // Para la clave por defecto se ignoran espacios, "+" y mayúsculas
+      // ("4115496 TESLAVI", "4115496+teslavi" también entran).
+      const passNormalizada = pass.toLowerCase().replace(/[\s+]/g, '');
       if (!ci || !pass) {
         if (!ci && document.getElementById('ciInput').value.trim()) mostrarError('Ingresá solo los números de tu carnet.');
         return;
@@ -681,15 +741,14 @@
           window.cfgTrimestres = cfg || { t1_inicio: null, t1_fin: null, t2_inicio: null, t2_fin: null };
         }
 
+        // La clave por defecto (carnet + teslavi) siempre vale; si el
+        // estudiante o Administración puso una propia, esa también vale.
         const tieneClavePropia = est.password_custom && est.password_custom.trim().length > 0;
-        const passValida = tieneClavePropia
-          ? pass === est.password_custom
-          : pass.toLowerCase() === (ci + 'teslavi');
+        const passValida = passNormalizada === (ci + 'teslavi')
+          || (tieneClavePropia && pass === est.password_custom.trim());
 
         if (!passValida) {
-          mostrarError(tieneClavePropia
-            ? 'Contraseña incorrecta.'
-            : 'Contraseña incorrecta. Tu contraseña es tu carnet seguido de "teslavi" (ejemplo: 12345678teslavi).');
+          mostrarError(`Contraseña incorrecta. Tu contraseña es el número de tu carnet seguido de "teslavi" (ejemplo: ${ci}teslavi).`);
           return;
         }
 
