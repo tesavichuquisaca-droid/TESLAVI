@@ -910,6 +910,17 @@
             Bloqueo de Notas
           </div>
 
+          <div class="menu-item" id="menu-admin-historial-academico" onclick="cambiarSeccion('seccion-historial-academico', this)">
+            <svg class="ui-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 3v5h5" />
+              <path d="M3.05 13A9 9 0 1 0 6 5.3L3 8" />
+              <path d="M12 7v5l4 2" />
+            </svg> <span
+              style="font-family: var(--f-datos); color: var(--verde-600); opacity: 0.7; margin-right: 8px; font-size: 13px;">05C</span>
+            Historial Académico
+          </div>
+
           <div class="menu-item" id="menu-admin-estadisticas" onclick="cambiarSeccion('seccion-estadisticas', this)">
             <svg class="ui-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
               stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -1917,6 +1928,44 @@
                 • Si el docente tiene la página abierta, el bloqueo se revisa otra vez al momento de guardar.
               </div>
             </div>
+          </div>
+
+          <!-- SECCIÓN: HISTORIAL ACADÉMICO — notas guardadas en cada Cambio
+               de Gestión (tabla historial_academico). Solo lectura. -->
+          <div id="seccion-historial-academico" class="seccion">
+            <h1 class="header-title">Historial Académico</h1>
+            <p class="header-desc">Notas de cada estudiante en cada gestión cerrada (Trimestre 1, Trimestre 2, final y
+              decisión de Dirección). Se guarda solo al hacer el Cambio de Gestión.</p>
+
+            <div class="filtro-card" style="margin-bottom: var(--e-6);">
+              <div style="flex: 2; min-width: 220px;">
+                <label for="buscarHistorial"
+                  style="font-size: 13px; font-weight: 500; color: var(--tinta-700); display: block; margin-bottom: 6px;">Buscar
+                  estudiante por nombre, apellido o CI</label>
+                <div class="campo-buscar">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <input type="text" id="buscarHistorial" class="select-css" placeholder="Ej. Mamani o 4115496"
+                    onkeydown="if(event.key==='Enter') window.buscarEstudianteHistorial()">
+                </div>
+              </div>
+              <div style="display:flex; align-items:flex-end;">
+                <button type="button" class="btn-ingresar" style="width:auto; padding:10px 20px; margin:0;"
+                  onclick="window.buscarEstudianteHistorial()">Buscar</button>
+              </div>
+              <div style="min-width: 180px;">
+                <label for="historialGestionSel"
+                  style="font-size: 13px; font-weight: 500; color: var(--tinta-700); display: block; margin-bottom: 6px;">Backup
+                  de una gestión completa</label>
+                <div style="display:flex; gap:8px;">
+                  <select id="historialGestionSel" class="select-css"><option value="">Cargando...</option></select>
+                  <button type="button" class="tab-btn" style="border:1px solid var(--borde); border-radius:var(--radio); padding:6px 14px;"
+                    onclick="window.exportarGestionHistorialExcel()">Excel</button>
+                </div>
+              </div>
+            </div>
+
+            <div id="historialResultados" style="margin-bottom: var(--e-6);"></div>
+            <div id="historialDetalle"></div>
           </div>
 
           <!-- SECCIÓN: MATERIAS -->
@@ -3976,13 +4025,13 @@
     // Secciones del sidebar gateadas por permisos_rol — el nombre acá
     // es idSeccion sin el prefijo "seccion-". Lo que no está en esta
     // lista (ej. seccion-inicio, o visores internos) no se filtra.
-    const SECCIONES_CON_PERMISO = ['estudiantes', 'docentes', 'materias', 'admin-academico', 'bloqueo-notas',
+    const SECCIONES_CON_PERMISO = ['estudiantes', 'docentes', 'materias', 'admin-academico', 'bloqueo-notas', 'historial-academico',
       'estadisticas', 'centralizador', 'libretas', 'finanzas-dashboard', 'financiero',
       'cobranza', 'caja', 'reportes-financieros', 'gastos-institucionales'];
     const MENU_ID_POR_SECCION = {
       'estudiantes': 'menu-admin-estudiantes', 'docentes': 'menu-admin-docentes',
       'materias': 'menu-admin-materias', 'admin-academico': 'menu-admin-academico',
-      'bloqueo-notas': 'menu-admin-bloqueo-notas',
+      'bloqueo-notas': 'menu-admin-bloqueo-notas', 'historial-academico': 'menu-admin-historial-academico',
       'estadisticas': 'menu-admin-estadisticas', 'centralizador': 'menu-admin-centralizador',
       'libretas': 'menu-admin-libretas', 'finanzas-dashboard': 'menu-admin-finanzas-dashboard',
       'financiero': 'menu-admin-financiero', 'cobranza': 'menu-admin-cobranza',
@@ -4082,6 +4131,7 @@
       'seccion-materias': 'Materias',
       'seccion-admin-academico': 'Notas y Asistencia',
       'seccion-bloqueo-notas': 'Bloqueo de Notas',
+      'seccion-historial-academico': 'Historial Académico',
       'seccion-estadisticas': 'Estadísticas y Analítica',
       'seccion-centralizador': 'Centralizador',
       'seccion-libretas': 'Libretas',
@@ -4134,6 +4184,9 @@
       }
       if (idSeccion === 'seccion-bloqueo-notas' && typeof window.cargarBloqueoNotas === 'function') {
         window.cargarBloqueoNotas();
+      }
+      if (idSeccion === 'seccion-historial-academico' && typeof window.cargarGestionesHistorial === 'function') {
+        window.cargarGestionesHistorial();
       }
       if (idSeccion === 'seccion-docentes' && typeof window.cargarDocentes === 'function') {
         window.cargarDocentes();
@@ -4557,6 +4610,195 @@
         window.toast('No se pudo guardar: ' + err.message, 'error');
       }
       window.renderizarBloqueoNotas();
+    };
+
+    // ==========================================
+    // HISTORIAL ACADÉMICO (tabla historial_academico, solo lectura)
+    // ==========================================
+    const DECISION_TEXTO = { promueve: 'Promovido', repite: 'Repite', egresa: 'Egresó' };
+    window.historialActual = null; // { est, filas }
+
+    function historialTablaFaltante(error) {
+      return error && /historial_academico/.test(error.message || '') ;
+    }
+
+    window.cargarGestionesHistorial = async function () {
+      const sel = document.getElementById('historialGestionSel');
+      const { data, error } = await supabaseClient.from('historial_academico').select('gestion');
+      if (error) {
+        sel.innerHTML = '<option value="">—</option>';
+        if (historialTablaFaltante(error)) {
+          document.getElementById('historialResultados').innerHTML = '<div class="form-card" style="color:var(--error-texto); font-size:13.5px;">Falta ejecutar la migración <strong>032_historial_y_cambio_gestion_v2.sql</strong> en Supabase (SQL Editor).</div>';
+        }
+        return;
+      }
+      const gestiones = [...new Set((data || []).map(r => r.gestion))].sort().reverse();
+      sel.innerHTML = gestiones.length
+        ? gestiones.map(g => `<option value="${escHtml(g)}">${escHtml(g)}</option>`).join('')
+        : '<option value="">Todavía no hay gestiones guardadas</option>';
+    };
+
+    window.buscarEstudianteHistorial = async function () {
+      const cont = document.getElementById('historialResultados');
+      const texto = document.getElementById('buscarHistorial').value.replace(/[,()%*]/g, ' ').trim();
+      if (texto.length < 2) {
+        cont.innerHTML = '<p style="color:var(--texto-suave); font-size:13px;">Escribí al menos 2 letras o números.</p>';
+        return;
+      }
+      cont.innerHTML = '<p style="color:var(--texto-suave); font-size:13px;">Buscando...</p>';
+      let q = supabaseClient.from('estudiantes').select('id, nombres, apellidos, ci, semestre, turno, estado');
+      texto.split(/\s+/).forEach(p => { q = q.or(`nombres.ilike.%${p}%,apellidos.ilike.%${p}%,ci.ilike.%${p}%`); });
+      const { data, error } = await q.order('apellidos', { ascending: true }).limit(30);
+      if (error) {
+        console.error(error);
+        cont.innerHTML = '<p style="color:var(--error-texto); font-size:13px;">Error al buscar.</p>';
+        return;
+      }
+      if (!data || data.length === 0) {
+        cont.innerHTML = '<p style="color:var(--texto-suave); font-size:13px;">No se encontró ningún estudiante.</p>';
+        return;
+      }
+      window.historialBusquedaCache = data;
+      cont.innerHTML = `<div style="display:flex; flex-wrap:wrap; gap:8px;">${data.map(e => `
+        <button type="button" class="tab-btn" style="border:1px solid var(--borde); border-radius:var(--radio); padding:8px 12px; text-align:left;"
+          onclick="window.verHistorialEstudiante('${e.id}')">
+          <strong>${escHtml(e.apellidos)} ${escHtml(e.nombres)}</strong>
+          <span style="display:block; font-size:11.5px; color:var(--texto-suave);">CI ${escHtml(e.ci || '—')} · ${e.semestre ?? '—'}° · ${escHtml(e.turno || '')} · ${escHtml(e.estado || '')}</span>
+        </button>`).join('')}</div>`;
+    };
+
+    window.verHistorialEstudiante = async function (estId) {
+      const cont = document.getElementById('historialDetalle');
+      const est = (window.historialBusquedaCache || []).find(e => String(e.id) === String(estId));
+      cont.innerHTML = '<p style="color:var(--texto-suave);">Cargando historial...</p>';
+      const { data, error } = await supabaseClient.from('historial_academico').select('*')
+        .eq('estudiante_id', estId)
+        .order('gestion', { ascending: true })
+        .order('semestre_materia', { ascending: true });
+      if (error) {
+        console.error(error);
+        cont.innerHTML = '<p style="color:var(--error-texto);">Error al cargar el historial.</p>';
+        return;
+      }
+      window.historialActual = { est, filas: data || [] };
+      const nombre = est ? `${est.apellidos} ${est.nombres}` : 'Estudiante';
+      if (!data || data.length === 0) {
+        cont.innerHTML = `<div class="form-card"><h3 style="margin:0 0 6px;">${escHtml(nombre)}</h3><p style="color:var(--texto-suave); margin:0;">Todavía no tiene notas guardadas en el historial (se guardan al hacer el Cambio de Gestión).</p></div>`;
+        return;
+      }
+
+      const porGestion = new Map();
+      data.forEach(f => { if (!porGestion.has(f.gestion)) porGestion.set(f.gestion, []); porGestion.get(f.gestion).push(f); });
+
+      const colorEstado = e => e === 'Aprobado' ? 'var(--verde-800)' : e === 'Reprobado' ? 'var(--error-texto)' : 'var(--texto-suave)';
+      let html = `
+        <div class="form-card" style="max-width:1100px;">
+          <div class="form-section-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; border-bottom:1px solid var(--borde); padding-bottom:16px; margin-bottom:16px;">
+            <div>
+              <h3 style="margin:0;">${escHtml(nombre)}</h3>
+              <p style="margin:4px 0 0;">CI ${escHtml(est?.ci || '—')} · Actual: ${est?.semestre ?? '—'}° semestre · ${escHtml(est?.turno || '')} · ${escHtml(est?.estado || '')}</p>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button type="button" class="tab-btn" style="border:1px solid var(--borde); border-radius:var(--radio); padding:6px 14px;" onclick="window.exportarHistorialPdf()">PDF</button>
+              <button type="button" class="tab-btn" style="border:1px solid var(--borde); border-radius:var(--radio); padding:6px 14px;" onclick="window.exportarHistorialExcel()">Excel</button>
+            </div>
+          </div>`;
+      porGestion.forEach((filas, gestion) => {
+        const f0 = filas[0];
+        html += `
+          <h4 style="margin:20px 0 8px; color:var(--verde-950); font-family:var(--f-display);">Gestión ${escHtml(gestion)} — ${f0.semestre_estudiante ?? '—'}° semestre · ${escHtml(f0.turno || '')}
+            <span style="font-size:12px; font-weight:600; margin-left:8px; padding:3px 10px; border-radius:100px; background:var(--fondo); color:var(--tinta-700);">${DECISION_TEXTO[f0.decision] || '—'}</span></h4>
+          <div class="tabla-scroll-wrap">
+            <table class="materia-table" style="width:100%; min-width:640px; margin:0;">
+              <thead><tr><th>Materia</th><th style="text-align:center;">T1</th><th style="text-align:center;">T2</th><th style="text-align:center;">Semestral</th><th style="text-align:center;">Recup.</th><th style="text-align:center;">Final</th><th>Estado</th></tr></thead>
+              <tbody>${filas.map(f => `
+                <tr>
+                  <td>${escHtml(f.materia_nombre || f.materia_codigo)}${f.tipo === 'arrastre' ? ' <span style="font-size:10.5px; color:#B45309;">(arrastre)</span>' : ''}<span style="display:block; font-size:11px; color:var(--texto-suave);">${escHtml(f.materia_codigo)}</span></td>
+                  <td style="text-align:center;">${f.t1_total ?? '—'}</td>
+                  <td style="text-align:center;">${f.t2_total ?? '—'}</td>
+                  <td style="text-align:center;">${f.semestral ?? '—'}</td>
+                  <td style="text-align:center;">${f.recuperatorio ?? '—'}</td>
+                  <td style="text-align:center; font-weight:700;">${f.nota_final ?? '—'}</td>
+                  <td style="font-weight:600; color:${colorEstado(f.estado)};">${escHtml(f.estado || '—')}</td>
+                </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>`;
+      });
+      html += '</div>';
+      cont.innerHTML = html;
+    };
+
+    const CABECERA_HISTORIAL = ['Gestión', 'Sem. est.', 'Turno', 'Código', 'Materia', 'Tipo', 'T1', 'T2', 'Semestral', 'Recup.', 'Final', 'Estado', 'Decisión'];
+    function filaHistorialExport(f) {
+      return [f.gestion, f.semestre_estudiante ?? '', f.turno || '', f.materia_codigo, f.materia_nombre || '', f.tipo === 'arrastre' ? 'Arrastre' : 'Regular',
+        f.t1_total ?? '', f.t2_total ?? '', f.semestral ?? '', f.recuperatorio ?? '', f.nota_final ?? '', f.estado || '', DECISION_TEXTO[f.decision] || ''];
+    }
+    async function descargarExcel(wb, nombreArchivo) {
+      const buffer = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nombreArchivo;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    }
+
+    window.exportarHistorialExcel = async function () {
+      const h = window.historialActual;
+      if (!h || !h.filas.length) { window.toast('No hay historial para exportar.', 'info'); return; }
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet('Historial');
+      ws.addRow([`INSTITUTO TECNOLÓGICO TESLAVI — HISTORIAL ACADÉMICO`]).font = { bold: true, size: 13 };
+      ws.addRow([`${h.est ? `${h.est.apellidos} ${h.est.nombres}` : ''} — CI ${h.est?.ci || ''}`]);
+      ws.addRow([]);
+      const cab = ws.addRow(CABECERA_HISTORIAL);
+      cab.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      cab.eachCell(c => { c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF146C46' } }; });
+      h.filas.forEach(f => ws.addRow(filaHistorialExport(f)));
+      ws.columns.forEach((c, i) => { c.width = i === 4 ? 36 : 12; });
+      await descargarExcel(wb, `historial_${(h.est?.ci || 'estudiante').replace(/\W+/g, '_')}.xlsx`);
+    };
+
+    window.exportarHistorialPdf = function () {
+      const h = window.historialActual;
+      if (!h || !h.filas.length) { window.toast('No hay historial para exportar.', 'info'); return; }
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: 'landscape' });
+      doc.setFontSize(14);
+      doc.text('INSTITUTO TECNOLÓGICO TESLAVI — HISTORIAL ACADÉMICO', 148.5, 15, { align: 'center' });
+      doc.setFontSize(10);
+      doc.text(`${h.est ? `${h.est.apellidos} ${h.est.nombres}` : ''} — CI ${h.est?.ci || ''}`, 148.5, 22, { align: 'center' });
+      doc.autoTable({
+        startY: 28,
+        head: [CABECERA_HISTORIAL],
+        body: h.filas.map(filaHistorialExport),
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [20, 108, 70] }
+      });
+      doc.save(`historial_${(h.est?.ci || 'estudiante').replace(/\W+/g, '_')}.pdf`);
+    };
+
+    window.exportarGestionHistorialExcel = async function () {
+      const gestion = document.getElementById('historialGestionSel').value;
+      if (!gestion) { window.toast('No hay gestión elegida.', 'info'); return; }
+      const [{ data, error }, { data: ests }] = await Promise.all([
+        supabaseClient.from('historial_academico').select('*').eq('gestion', gestion),
+        supabaseClient.from('estudiantes').select('id, nombres, apellidos, ci')
+      ]);
+      if (error) { window.toast('Error al cargar: ' + error.message, 'error'); return; }
+      if (!data || !data.length) { window.toast('Esa gestión no tiene notas guardadas.', 'info'); return; }
+      const mapEst = new Map((ests || []).map(e => [e.id, e]));
+      const nombreDe = id => { const e = mapEst.get(id); return e ? `${e.apellidos} ${e.nombres}` : ''; };
+      data.sort((a, b) => (a.semestre_estudiante - b.semestre_estudiante) || nombreDe(a.estudiante_id).localeCompare(nombreDe(b.estudiante_id)) || String(a.materia_codigo).localeCompare(b.materia_codigo));
+
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet(`Gestión ${gestion}`.slice(0, 31));
+      ws.addRow([`INSTITUTO TECNOLÓGICO TESLAVI — NOTAS DE LA GESTIÓN ${gestion}`]).font = { bold: true, size: 13 };
+      ws.addRow([]);
+      const cab = ws.addRow(['Estudiante', 'CI', ...CABECERA_HISTORIAL]);
+      cab.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      cab.eachCell(c => { c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF146C46' } }; });
+      data.forEach(f => ws.addRow([nombreDe(f.estudiante_id), mapEst.get(f.estudiante_id)?.ci || '', ...filaHistorialExport(f)]));
+      ws.columns.forEach((c, i) => { c.width = i === 0 ? 32 : i === 6 ? 36 : 12; });
+      await descargarExcel(wb, `historial_gestion_${gestion.replace(/\W+/g, '_')}.xlsx`);
     };
 
     window.docentesDataCache = [];
@@ -6081,11 +6323,18 @@
         return null;
       }).filter(Boolean);
 
-      const todasACalificar = [...materiasPropias, ...materiasArrastreResueltas];
+      const todasACalificar = [
+        ...materiasPropias.map(m => ({ ...m, tipo: 'regular' })),
+        ...materiasArrastreResueltas.map(m => ({ ...m, tipo: 'arrastre' }))
+      ];
       const reprobadas = [];
+      // Resultado de cada materia — se guarda en historial_academico al
+      // confirmar el cambio de gestión.
+      const detalleMaterias = [];
       let sinEvaluarCount = 0;
       todasACalificar.forEach(m => {
         const r = calcularNotaMateria(est, m.codigo, cfgT);
+        detalleMaterias.push({ m, r });
         if (r.sinEvaluar) { sinEvaluarCount++; return; }
         if (!r.aprobado) reprobadas.push(m);
       });
@@ -6099,26 +6348,34 @@
       const turnoPorCodigo = {};
       arrastresGuardados.forEach(a => { turnoPorCodigo[a.codigo] = a.turno; });
       const nuevoArrastre = reprobadas.map(m => ({ codigo: m.codigo, turno: turnoPorCodigo[m.codigo] || null }));
+      // Si promueve (aunque la sugerencia sea "repite", Dirección decide):
+      // arrastra TODAS las reprobadas.
       const materiasArrastreStr = serializarArrastre(nuevoArrastre);
+      // Si repite: vuelve a cursar su semestre entero, así que el arrastre
+      // queda solo con las de arrastre que siguen reprobadas.
+      const arrastreSiRepiteStr = serializarArrastre(
+        reprobadas.filter(m => m.tipo === 'arrastre').map(m => ({ codigo: m.codigo, turno: turnoPorCodigo[m.codigo] || null }))
+      );
+      const base = { reprobadas, troncales, sinEvaluarCount, materiasArrastreStr, arrastreSiRepiteStr, detalleMaterias };
 
       if (troncales.length > 0) {
         return {
+          ...base,
           accion: 'repite',
-          texto: `Repite ${semestreEst}° — troncal: ${troncales.map(x => `${x.materia.nombre} (bloquea ${x.bloquea.nombre})`).join(', ')}`,
-          reprobadas, troncales, sinEvaluarCount, materiasArrastreStr: null
+          texto: `Repite ${semestreEst}° — troncal: ${troncales.map(x => `${x.materia.nombre} (bloquea ${x.bloquea.nombre})`).join(', ')}`
         };
       }
       if (semestreEst >= 6) {
         return {
+          ...base,
           accion: 'egresa',
-          texto: reprobadas.length ? `Egresa — con pendiente sin bloqueo: ${reprobadas.map(m => m.nombre).join(', ')}` : 'Egresa — completó el plan de estudios',
-          reprobadas, troncales, sinEvaluarCount, materiasArrastreStr: null
+          texto: reprobadas.length ? `Egresa — con pendiente sin bloqueo: ${reprobadas.map(m => m.nombre).join(', ')}` : 'Egresa — completó el plan de estudios'
         };
       }
       return {
+        ...base,
         accion: 'promueve',
-        texto: reprobadas.length ? `Promueve a ${semestreEst + 1}° — arrastra: ${reprobadas.map(m => m.nombre).join(', ')}` : `Promueve a ${semestreEst + 1}° — sin pendientes`,
-        reprobadas, troncales, sinEvaluarCount, materiasArrastreStr
+        texto: reprobadas.length ? `Promueve a ${semestreEst + 1}° — arrastra: ${reprobadas.map(m => m.nombre).join(', ')}` : `Promueve a ${semestreEst + 1}° — sin pendientes`
       };
     };
 
@@ -6143,7 +6400,8 @@
       }
       tbody.innerHTML = window.filaCargando(4, 'Calculando sugerencias...');
 
-      if (!window.cfgTrimestres) await window.cargarConfigTrimestres();
+      // Fechas de trimestre frescas: la nota final depende de ellas (asistencia).
+      await window.cargarConfigTrimestres();
 
       const { data, error } = await supabaseClient.from('estudiantes')
         .select('id, nombres, apellidos, ci, semestre, turno, estado, calificaciones, asistencias, materias_arrastre')
@@ -6236,8 +6494,47 @@
       const promociones = window.cambioGestionCache.map(x => ({
         estudiante_id: x.est.id,
         accion: x.resultado,
-        materias_arrastre: x.resultado === 'promueve' ? x.sug.materiasArrastreStr : null
+        materias_arrastre: x.resultado === 'promueve' ? x.sug.materiasArrastreStr
+          : x.resultado === 'repite' ? x.sug.arrastreSiRepiteStr : null
       }));
+
+      // Backup de notas: una fila por estudiante + materia de esta gestión.
+      const historial = [];
+      window.cambioGestionCache.forEach(x => {
+        (x.sug.detalleMaterias || []).forEach(({ m, r }) => {
+          historial.push({
+            estudiante_id: x.est.id,
+            semestre_estudiante: parseInt(x.est.semestre) || null,
+            semestre_materia: m.semestre || null,
+            turno: x.est.turno || null,
+            materia_codigo: m.codigo,
+            materia_nombre: m.nombre,
+            tipo: m.tipo || 'regular',
+            t1_total: r.t1total,
+            t2_total: r.t2total,
+            semestral: r.semestral,
+            recuperatorio: r.n.recuperatorio,
+            nota_final: r.notaFinal,
+            estado: r.sinEvaluar ? 'Sin evaluar' : (r.aprobado ? 'Aprobado' : 'Reprobado'),
+            decision: x.resultado,
+            detalle: { t1: r.n.t1, t2: r.n.t2, asistencia_t1: r.a1, asistencia_t2: r.a2 }
+          });
+        });
+      });
+
+      // Fechas de cuotas: si son de la gestión que termina, los planes
+      // nuevos nacen vencidos (la base también lo bloquea).
+      const { data: fechasCuotas } = await supabaseClient.from('config_fechas_cuotas').select('numero_cuota, turno, fecha_fin');
+      const hoy = new Date().toISOString().slice(0, 10);
+      const fechasViejas = (fechasCuotas || []).filter(f => f.fecha_fin < hoy);
+      if (!fechasCuotas || fechasCuotas.length === 0 || fechasViejas.length === fechasCuotas.length) {
+        msg.className = 'mensaje error visible';
+        msg.textContent = `Primero actualizá las "Fechas de pago de cada cuota, por turno" (arriba) con las fechas de la gestión ${gestionNueva}. Las que hay ahora ya pasaron: los planes nuevos nacerían vencidos.`;
+        return;
+      }
+      const avisoFechas = fechasViejas.length
+        ? `<br><br><strong style="color:var(--error-texto);">Ojo:</strong> ${fechasViejas.length} fecha(s) de cuota ya pasaron (${fechasViejas.map(f => `cuota ${f.numero_cuota} ${f.turno}`).join(', ')}). Esas cuotas nacerán vencidas.`
+        : '';
 
       const promovidos = promociones.filter(p => p.accion === 'promueve').length;
       const repiten = promociones.filter(p => p.accion === 'repite').length;
@@ -6245,7 +6542,12 @@
 
       const ok = await window.confirmarAccion({
         titulo: 'Confirmar cambio de gestión',
-        cuerpo: `Vas a promover ${promovidos} estudiante(s), repetir ${repiten}, egresar ${egresan}, cerrar la gestión ${gestionActual} y generar los planes de pago de ${gestionNueva} para todos los que sigan activos. Esta acción es plata y notas — no se puede deshacer con un clic. ¿Confirmás?`,
+        cuerpo: `Vas a promover ${promovidos} estudiante(s), repetir ${repiten}, egresar ${egresan}, cerrar la gestión ${gestionActual} y generar los planes de pago de ${gestionNueva}.<br><br>
+          • Las notas de ${gestionActual} se guardan en el <strong>Historial Académico</strong> y después se limpian (promovidos y repitentes empiezan de cero).<br>
+          • Lo que quedó <strong>sin pagar</strong> pasa como una cuota extra al plan de ${gestionNueva}.<br>
+          • Planes anuales (primer semestre) y profesionales siguen activos, sin plan nuevo.<br>
+          • Las fechas de Trimestre 1/2 y el bloqueo de notas se reinician: cargalos de nuevo para ${gestionNueva}.${avisoFechas}<br><br>
+          Esta acción es plata y notas — no se puede deshacer con un clic. ¿Confirmás?`,
         textoConfirmar: 'Sí, aplicar cambio de gestión',
         peligro: true,
         palabraRequerida: 'CONFIRMAR'
@@ -6262,12 +6564,19 @@
         const { data, error } = await supabaseClient.rpc('promover_estudiantes', {
           p_gestion_actual: gestionActual,
           p_gestion_nueva: gestionNueva,
-          p_promociones: promociones
+          p_promociones: promociones,
+          p_historial: historial
         });
         if (error) throw error;
         msg.style.background = '#E4EFE9';
         msg.style.color = 'var(--verde-800)';
-        msg.textContent = `Listo: ${data.promovidos} promovidos, ${data.repiten} repiten, ${data.egresan} egresaron, ${data.planes_creados} plan(es) de pago creados para ${gestionNueva}.`;
+        msg.textContent = `Listo: ${data.promovidos} promovidos, ${data.repiten} repiten, ${data.egresan} egresaron, ${data.planes_creados} plan(es) de pago creados para ${gestionNueva}. `
+          + `${data.historial} nota(s) guardadas en el Historial Académico. `
+          + `${data.deudas_transferidas} deuda(s) pasadas a la gestión nueva (Bs. ${Number(data.monto_deudas || 0).toFixed(2)})`
+          + `${data.deudas_retenidas ? `, ${data.deudas_retenidas} sin plan nuevo quedan con su plan anterior activo` : ''}. `
+          + `${data.anuales_renovados ? `${data.anuales_renovados} plan(es) anual(es) siguen activos. ` : ''}`
+          + `Ahora cargá las fechas de Trimestre 1/2 de ${gestionNueva} en Notas y Asistencia.`;
+        await window.cargarConfigTrimestres();
         window.cambioGestionCache = [];
         document.getElementById('tbodyCambioGestion').innerHTML = `<tr><td colspan="4" class="tabla-vacia"><div class="tabla-vacia-texto">Cambio de gestión aplicado. Elegí una gestión nueva para calcular otra vez si hace falta.</div></td></tr>`;
         await window.cargarConfigFinancieraDefault();
