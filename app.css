@@ -1,0 +1,491 @@
+/* App AMADESU: botones de la barra, invitación a instalar, hoja de diálogo y avisos. */
+.app-acciones {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.app-acciones:empty {
+  display: none;
+}
+
+.app-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border-strong, rgba(255, 255, 255, 0.15));
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-main, #F8F9FA);
+  font-family: var(--font-body, sans-serif);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  position: relative;
+  white-space: nowrap;
+  transition: background 0.2s, border-color 0.2s, transform 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.app-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.app-btn:active {
+  transform: scale(0.96);
+}
+
+.app-btn-instalar {
+  background: var(--accent-primary, #E63946);
+  border-color: var(--accent-primary, #E63946);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(230, 57, 70, 0.35);
+}
+
+.app-btn-instalar:hover {
+  background: var(--accent-hover, #ff4d5a);
+}
+
+.app-btn-avisos .app-dot {
+  display: none;
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--live-green, #00F5A0);
+  box-shadow: 0 0 0 2px var(--bg-base, #0a0a0a);
+}
+
+.app-btn-avisos.activo {
+  border-color: rgba(0, 245, 160, 0.45);
+  color: var(--live-green, #00F5A0);
+}
+
+.app-btn-avisos.activo .app-dot {
+  display: block;
+}
+
+/* Invitación a instalar: hoja grande desde abajo (celular) o tarjeta centrada (PC) */
+.app-invitacion-fondo {
+  position: fixed;
+  inset: 0;
+  z-index: 2500;
+  background: rgba(0, 0, 0, 0.62);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.app-invitacion-fondo.visible {
+  opacity: 1;
+}
+
+.app-invitacion {
+  width: min(520px, 100vw);
+  max-height: 92vh;
+  overflow-y: auto;
+  padding: 26px 22px calc(18px + env(safe-area-inset-bottom, 0px));
+  border-radius: 24px 24px 0 0;
+  background:
+    radial-gradient(120% 70% at 50% 0%, rgba(230, 57, 70, 0.22), transparent 60%),
+    var(--bg-surface, #131313);
+  border: 1px solid var(--border-strong, rgba(255, 255, 255, 0.15));
+  border-bottom: none;
+  box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.6);
+  font-family: var(--font-body, sans-serif);
+  color: var(--text-main, #F8F9FA);
+  transform: translateY(40px);
+  transition: transform 0.4s cubic-bezier(0.22, 0.9, 0.32, 1);
+}
+
+.app-invitacion-fondo.visible .app-invitacion {
+  transform: translateY(0);
+}
+
+.app-invitacion-cabeza {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.app-invitacion-icono {
+  width: 76px;
+  height: 76px;
+  border-radius: 18px;
+  flex-shrink: 0;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.app-invitacion-marca {
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--live-green, #00F5A0);
+  margin-bottom: 4px;
+}
+
+.app-invitacion h3 {
+  font-family: var(--font-display, sans-serif);
+  font-size: 28px;
+  line-height: 1.05;
+  margin: 0;
+  text-wrap: balance;
+}
+
+.app-beneficios {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.app-beneficios li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
+}
+
+.app-beneficios li>span {
+  font-size: 24px;
+  width: 30px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.app-beneficios b {
+  display: block;
+  font-size: 15px;
+  color: var(--text-main, #F8F9FA);
+}
+
+.app-beneficios small {
+  display: block;
+  font-size: 13px;
+  color: var(--text-muted, #8E9BAE);
+  line-height: 1.35;
+  margin-top: 2px;
+}
+
+.app-btn-instalar-grande {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 17px;
+  font-size: 17px;
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(230, 57, 70, 0.45);
+  animation: appLatido 2.6s ease-in-out 1s infinite;
+}
+
+.app-btn-instalar-grande svg {
+  width: 20px;
+  height: 20px;
+}
+
+@keyframes appLatido {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.025); }
+}
+
+@media (min-width: 720px) {
+  .app-invitacion-fondo {
+    align-items: center;
+  }
+
+  .app-invitacion {
+    border-radius: 24px;
+    border-bottom: 1px solid var(--border-strong, rgba(255, 255, 255, 0.15));
+    padding: 30px 30px 20px;
+  }
+
+  .app-invitacion h3 {
+    font-size: 32px;
+  }
+}
+
+@media (max-height: 640px) {
+  .app-beneficios small {
+    display: none;
+  }
+
+  .app-invitacion-icono {
+    width: 60px;
+    height: 60px;
+  }
+}
+
+/* Hoja de diálogo (instrucciones de iPhone, activar avisos...) */
+.app-hoja-fondo {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+
+.app-hoja-fondo.visible {
+  opacity: 1;
+}
+
+.app-hoja {
+  position: relative;
+  width: min(480px, 100vw);
+  max-height: 88vh;
+  overflow-y: auto;
+  background: var(--bg-surface, #131313);
+  border: 1px solid var(--border-strong, rgba(255, 255, 255, 0.15));
+  border-bottom: none;
+  border-radius: 20px 20px 0 0;
+  padding: 26px 22px calc(22px + env(safe-area-inset-bottom, 0px));
+  font-family: var(--font-body, sans-serif);
+  color: var(--text-main, #F8F9FA);
+  transform: translateY(30px);
+  transition: transform 0.3s cubic-bezier(0.22, 0.9, 0.32, 1);
+}
+
+.app-hoja-fondo.visible .app-hoja {
+  transform: translateY(0);
+}
+
+@media (min-width: 720px) {
+  .app-hoja-fondo {
+    align-items: center;
+  }
+
+  .app-hoja {
+    border-radius: 20px;
+    border-bottom: 1px solid var(--border-strong, rgba(255, 255, 255, 0.15));
+  }
+}
+
+.app-hoja h3 {
+  font-family: var(--font-display, sans-serif);
+  font-size: 24px;
+  margin: 0 0 10px;
+  padding-right: 28px;
+  line-height: 1.15;
+}
+
+.app-hoja p {
+  color: #cfd5dd;
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0 0 12px;
+}
+
+.app-hoja-x {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted, #8E9BAE);
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.app-hoja-icono {
+  width: 60px;
+  height: 60px;
+  border-radius: 14px;
+  margin-bottom: 12px;
+  display: block;
+}
+
+.app-hoja-nota {
+  font-size: 13px !important;
+  color: var(--text-muted, #8E9BAE) !important;
+}
+
+.app-pasos {
+  list-style: none;
+  padding: 0;
+  margin: 4px 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.app-pasos li {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  font-size: 14px;
+  line-height: 1.45;
+  color: #dfe3e8;
+}
+
+.app-pasos li>b:first-child {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--accent-primary, #E63946);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+}
+
+.app-lista {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+  color: #dfe3e8;
+}
+
+.app-lista li {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
+}
+
+.app-btn-grande {
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  border: none;
+  background: var(--accent-primary, #E63946);
+  color: #fff;
+  font-family: var(--font-body, sans-serif);
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.app-btn-grande.secundario {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-strong, rgba(255, 255, 255, 0.15));
+  color: var(--text-main, #F8F9FA);
+}
+
+.app-btn-link {
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted, #8E9BAE);
+  font-family: var(--font-body, sans-serif);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.app-toast {
+  position: fixed;
+  left: 50%;
+  top: calc(16px + env(safe-area-inset-top, 0px));
+  transform: translate(-50%, -20px);
+  opacity: 0;
+  z-index: 3100;
+  max-width: calc(100vw - 32px);
+  padding: 12px 18px;
+  border-radius: 12px;
+  background: #1c1c1c;
+  border: 1px solid rgba(0, 245, 160, 0.4);
+  color: #F8F9FA;
+  font-family: var(--font-body, sans-serif);
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  transition: opacity 0.25s, transform 0.25s;
+}
+
+.app-toast.visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* Celular: la barra superior es angosta -> botones compactos arriba a la derecha */
+@media (max-width: 768px) {
+  .topbar>.app-acciones {
+    position: absolute;
+    top: 14px;
+    right: 12px;
+  }
+
+  /* Logo a la izquierda y botones a la derecha, en la misma fila. */
+  .topbar:has(> .app-acciones:not(:empty))>.brand {
+    align-self: flex-start;
+    max-width: calc(100% - 100px);
+  }
+
+  .app-btn {
+    padding: 8px 10px;
+  }
+
+  .app-btn-txt,
+  .app-btn-instalar span {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .app-invitacion,
+  .app-invitacion-fondo,
+  .app-btn-instalar-grande,
+  .app-hoja,
+  .app-hoja-fondo,
+  .app-toast {
+    transition: none;
+    animation: none;
+  }
+}
+
+/* Novedades: número de no leídas en la campanita y el panel */
+.app-btn-avisos .app-badge {
+  position: absolute; top: -6px; right: -6px; min-width: 19px; height: 19px; padding: 0 5px;
+  border-radius: 10px; background: var(--accent-primary, #E63946); color: #fff;
+  font-size: 11px; font-weight: 800; line-height: 19px; text-align: center;
+  box-shadow: 0 0 0 2px var(--bg-base, #0a0a0a); font-style: normal;
+}
+.app-btn-avisos .app-badge[hidden] { display: none; }
+.app-nov-avisos { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 4px 0 14px; padding: 12px 14px; border-radius: 14px; background: rgba(230, 57, 70, 0.08); border: 1px solid rgba(230, 57, 70, 0.3); font-size: 13px; }
+.app-nov-avisos.ok { background: rgba(0, 245, 160, 0.07); border-color: rgba(0, 245, 160, 0.3); color: var(--live-green, #00F5A0); }
+.app-nov-avisos .app-btn-grande { width: auto; margin: 0; padding: 10px 16px; font-size: 13px; }
+.app-nov-lista { display: flex; flex-direction: column; gap: 8px; }
+.app-nov { display: flex; gap: 12px; align-items: flex-start; padding: 12px; border-radius: 14px; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06)); color: inherit; text-decoration: none; }
+a.app-nov:active { transform: scale(0.99); }
+a.app-nov:hover { border-color: var(--border-strong, rgba(255, 255, 255, 0.15)); }
+.app-nov.nueva { border-color: rgba(230, 57, 70, 0.45); background: rgba(230, 57, 70, 0.06); }
+.app-nov-ico { font-size: 22px; line-height: 1; flex-shrink: 0; width: 28px; text-align: center; }
+.app-nov-txt { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.app-nov-txt b { font-size: 14px; line-height: 1.3; }
+.app-nov-txt span { font-size: 13px; color: var(--text-muted, #8E9BAE); line-height: 1.4; }
+.app-nov-txt small { font-size: 11px; color: var(--text-muted, #8E9BAE); opacity: 0.8; }
+.app-nov.nueva .app-nov-txt small::before { content: '● '; color: var(--accent-primary, #E63946); }
+.app-nov-vacio { color: var(--text-muted, #8E9BAE); font-size: 14px; text-align: center; padding: 20px 6px; }
