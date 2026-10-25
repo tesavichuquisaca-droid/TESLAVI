@@ -29,12 +29,14 @@
     <div class="pl-herr">
       <label class="pl-buscar"><span>Ir al Nº</span><input id="pl-ir" class="pl-control" inputmode="numeric" placeholder="Ej. 22" autocomplete="off"></label>
       <select id="pl-clase" class="pl-control" aria-label="Filtrar clase"><option value="">Todas las clases</option></select>
+      <select id="pl-alcance" class="pl-control" aria-label="Clasificación por" title="General, por etapa o por PE"><option value="general">Clasificación: General</option></select>
       <div class="pl-orden" role="group" aria-label="Orden">
         <button type="button" data-orden="resultado" class="activo">Por resultado</button>
         <button type="button" data-orden="numero">Por Nº</button>
       </div>
       <button type="button" class="pl-btn" id="pl-copiar-lista" title="Copia la clasificación por clase para pegar en WhatsApp">📋 Copiar lista</button>
       <button type="button" class="pl-btn" id="pl-pdf" title="Clasificación por clase en PDF">📄 PDF</button>
+      <button type="button" class="pl-btn" id="pl-orden-clases" hidden title="Elegí en qué orden salen las clases">↕ Orden de clases</button>
       <button type="button" class="pl-btn" id="pl-config" hidden>⚙ Encabezado y firmas</button>
       <button type="button" class="pl-btn primario" id="pl-excel">⬇ Descargar Excel</button>
     </div>
