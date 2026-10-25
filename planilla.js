@@ -14,7 +14,7 @@ const estado = {
   esAdmin: false, rally: null, etapas: [], pes: [], inscritos: [],
   tiempos: new Map(),     // "ins|rec" -> { id, salidaMs, pasoMs, brutoMs, estado, brutoSinHoras }
   penales: new Map(),     // "ins|rec" -> [{ id, ms, motivo }]
-  config: {}, orden: 'numero', clase: '', ultimoSync: null,
+  config: {}, orden: 'resultado', clase: '', ultimoSync: null,
   activa: null, editando: null, guardando: new Map(),
 };
 const clave = (i, r) => `${i}|${r}`;
@@ -312,7 +312,8 @@ async function iniciar() {
   $('pl-volver').href = estado.esAdmin ? 'admin_dashboard.html' : 'operador_dashboard.html';
   $('pl-config').hidden = !estado.esAdmin;
 
-  try { estado.orden = localStorage.getItem('pl_orden') || 'numero'; if (localStorage.getItem('pl_sin_ayuda')) $('pl-ayuda').remove(); } catch (e) { }
+  // Por defecto: por resultado (por clase, el menor tiempo arriba).
+  try { estado.orden = localStorage.getItem('pl_orden_v2') || 'resultado'; if (localStorage.getItem('pl_sin_ayuda')) $('pl-ayuda').remove(); } catch (e) { }
   document.querySelectorAll('.pl-orden button').forEach(b => b.classList.toggle('activo', b.dataset.orden === estado.orden));
 
   let rallyId = new URLSearchParams(location.search).get('rally');
@@ -1231,6 +1232,96 @@ async function descargarExcel() {
 }
 
 // ------------------------------------------------------------------
+// Clasificación por clase (menor tiempo arriba): copiar como texto y PDF
+// ------------------------------------------------------------------
+// Mismo orden que "Por resultado": completas por tiempo, después las que les
+// faltan PE (más PE primero), después abandono / no largó y al final sin tiempos.
+function clasificacionPorClase() {
+  const grupos = clasificar();
+  return ordenarClases(Object.keys(grupos)).filter(cl => !estado.clase || cl === estado.clase).map(cl => ({ clase: cl, filas: grupos[cl] }));
+}
+const nombresFila = i => {
+  const p = i.piloto ? `${i.piloto.nombre} ${i.piloto.apellido}`.trim() : 'Sin piloto';
+  const n = i.navegante ? `${i.navegante.nombre} ${i.navegante.apellido}`.trim() : '';
+  return n ? `${p} / ${n}` : p;
+};
+function tiempoFila(f) {
+  if (f.completa) return verTotal(f.general);
+  if (f.especial) return ESPECIALES[f.especial];
+  if (f.completas) return `Faltan ${estado.pes.length - f.completas} PE`;
+  return 'Sin tiempos';
+}
+const momento = () => new Date().toLocaleString('es-BO', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
+
+async function copiarLista() {
+  if (!estado.rally || !estado.pes.length) return;
+  const lineas = [`🏁 *${estado.rally.nombre.toUpperCase()}*`, `Clasificación general por clase · ${momento()}`];
+  for (const { clase, filas } of clasificacionPorClase()) {
+    lineas.push('', `*${clase}*`);
+    for (const f of filas) {
+      if (!f.conDatos) continue; // sin ningún tiempo cargado todavía
+      const dif = f.difPrimero != null ? ` (+${verDuracion(f.difPrimero)})` : '';
+      const pen = f.penal ? ` [pen. ${verPenal(f.penal)}]` : '';
+      lineas.push(`${f.psto ?? '-'}. #${f.ins.numero} ${nombresFila(f.ins)} — ${tiempoFila(f)}${f.completa ? dif + pen : ''}`);
+    }
+    if (!filas.some(f => f.conDatos)) lineas.push('(todavía sin tiempos)');
+  }
+  const texto = lineas.join('\n');
+  try { await navigator.clipboard.writeText(texto); }
+  catch (e) {
+    const t = document.createElement('textarea');
+    t.value = texto; t.style.cssText = 'position:fixed; opacity:0;';
+    document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove();
+  }
+  toast('📋 Clasificación copiada: pegala en WhatsApp o donde quieras.');
+}
+
+function descargarPdf() {
+  if (!window.jspdf?.jsPDF) return toast('Todavía está cargando el generador de PDF, probá en un segundo.', true);
+  if (!estado.rally || !estado.pes.length) return;
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const ancho = doc.internal.pageSize.getWidth();
+  const c = cfg();
+  let y = 14;
+  doc.setFont('times', 'bold');
+  doc.setFontSize(13);
+  for (const t of c.titulos.filter(Boolean)) {
+    const lineas = doc.splitTextToSize(t, ancho - 24); // título largo: en varias líneas, sin pisarse
+    doc.text(lineas, ancho / 2, y, { align: 'center' });
+    y += 5.6 * lineas.length;
+  }
+  doc.setFontSize(15); doc.text('CLASIFICACIÓN GENERAL POR CLASE', ancho / 2, y + 2, { align: 'center' }); y += 8;
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(90);
+  doc.text(`${estado.pes.length} PE · ${estado.pes.reduce((a, p) => a + p.km, 0).toFixed(2)} km · actualizado ${momento()}`, ancho / 2, y, { align: 'center' });
+  doc.setTextColor(0); y += 5;
+  for (const { clase, filas } of clasificacionPorClase()) {
+    if (y > 260) { doc.addPage(); y = 16; }
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.text(clase, 14, y + 4); y += 6;
+    doc.autoTable({
+      startY: y,
+      head: [['Psto', 'Nº', 'Piloto / Navegante', 'Asociación', 'PE', 'Penal.', 'Tiempo', 'Dif. 1º']],
+      body: filas.map(f => [f.psto ?? '', f.ins.numero, nombresFila(f.ins), f.ins.asociacion?.nombre || '', `${f.completas}/${estado.pes.length}`,
+        f.penal ? verPenal(f.penal) : '', tiempoFila(f), f.difPrimero != null ? '+' + verDuracion(f.difPrimero) : '']),
+      theme: 'grid', margin: { left: 14, right: 14 },
+      styles: { fontSize: 8.5, cellPadding: 1.6, valign: 'middle' },
+      headStyles: { fillColor: [0, 0, 0], textColor: 255, halign: 'center' },
+      columnStyles: { 0: { halign: 'center', cellWidth: 11, fontStyle: 'bold' }, 1: { halign: 'center', cellWidth: 11 }, 3: { cellWidth: 26 }, 4: { halign: 'center', cellWidth: 12 }, 5: { halign: 'center', cellWidth: 14 }, 6: { halign: 'center', cellWidth: 25, fontStyle: 'bold' }, 7: { halign: 'center', cellWidth: 20 } },
+      didParseCell: d => { if (d.section === 'body' && d.column.index === 6 && !/^\d/.test(String(d.cell.raw))) { d.cell.styles.fontStyle = 'italic'; d.cell.styles.textColor = /ABANDONO|NO LARG/.test(String(d.cell.raw)) ? [192, 57, 43] : [120, 120, 120]; } },
+    });
+    y = doc.lastAutoTable.finalY + 6;
+  }
+  const paginas = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= paginas; i++) {
+    doc.setPage(i); doc.setFontSize(8); doc.setTextColor(120);
+    doc.text(`AMADESU RALLYS — ${estado.rally.nombre}`, 14, 290);
+    doc.text(`Página ${i} de ${paginas}`, ancho - 14, 290, { align: 'right' });
+  }
+  doc.save(`CLASIFICACION - ${estado.rally.nombre.replace(/[\\/:*?"<>|]/g, '')}.pdf`);
+  toast('📄 PDF descargado.');
+}
+
+// ------------------------------------------------------------------
 // Eventos
 // ------------------------------------------------------------------
 $('pl-marco').addEventListener('click', e => {
@@ -1270,7 +1361,7 @@ $('pl-teclas').addEventListener('click', e => {
 
 document.querySelectorAll('.pl-orden button').forEach(b => b.onclick = () => {
   estado.orden = b.dataset.orden;
-  try { localStorage.setItem('pl_orden', estado.orden); } catch (e) { }
+  try { localStorage.setItem('pl_orden_v2', estado.orden); } catch (e) { }
   document.querySelectorAll('.pl-orden button').forEach(x => x.classList.toggle('activo', x === b));
   dibujar();
 });
@@ -1287,6 +1378,8 @@ $('pl-ir').addEventListener('keydown', e => {
   $('pl-ir').value = '';
 });
 $('pl-excel').onclick = descargarExcel;
+$('pl-copiar-lista').onclick = copiarLista;
+$('pl-pdf').onclick = descargarPdf;
 $('pl-config').onclick = abrirConfig;
 $('pl-ayuda-x')?.addEventListener('click', () => { $('pl-ayuda').remove(); try { localStorage.setItem('pl_sin_ayuda', '1'); } catch (e) { } });
 window.addEventListener('beforeunload', e => { if ([...estado.guardando.values()].includes('guardando')) { e.preventDefault(); e.returnValue = ''; } });
