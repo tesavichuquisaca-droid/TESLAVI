@@ -161,7 +161,7 @@ async function refrescarOtrasCopias() {
       const recIds = c.etapas.flatMap(e => e.recorridos.map(r => r.id));
       if (!recIds.length) continue;
       const [filas, pen, ins] = await Promise.all([
-        todo(() => db().from('tiempos').select('id, inscripcion_id, recorrido_id, vuelta, hora_salida, hora_llegada, tiempo_bruto, estado, updated_at').in('recorrido_id', recIds).is('deleted_at', null).order('updated_at')),
+        leerTiempos(recIds, null),
         todo(() => db().from('penalizaciones').select('id, inscripcion_id, recorrido_id, tiempo_penalizacion, motivo, created_at').in('recorrido_id', recIds).eq('tipo', 'tiempo').is('deleted_at', null).order('created_at')),
         todo(() => db().from('inscripciones').select('id, numero, piloto:pilotos(nombre, apellido), navegante:navegantes(nombre, apellido), categoria:categorias(nombre, codigo, orden), asociacion:asociaciones(nombre)').eq('rally_id', id).is('deleted_at', null).order('numero')),
       ]);
@@ -415,23 +415,47 @@ async function cargarDefecto() {
   return null;
 }
 
-async function traerTiemposYPenales(completo) {
-  const recIds = estado.pes.map(p => p.id);
-  if (!recIds.length) return;
-  const desde = completo ? null : estado.ultimoSync;
-  const filas = await todo(() => {
+// La planilla tiene sus propios tiempos (rally.planilla_tiempos, script 74):
+// lo que se carga fuera de la planilla se ve en la página, pero no acá.
+// Si todavía no se corrió el script 74, muestra los de la página (como antes).
+const esTablaFaltante = e => ['42P01', 'PGRST205', 'PGRST202'].includes(e?.code) || (/planilla_tiempos/.test(e?.message || '') && /exist|find|schema cache/i.test(e?.message || ''));
+async function leerTiempos(recIds, desde) {
+  if (estado.tablaPropia !== false) {
+    try {
+      const filas = await todo(() => {
+        let q = db().from('planilla_tiempos').select('inscripcion_id, recorrido_id, hora_salida, hora_llegada, tiempo_bruto, estado, updated_at').in('recorrido_id', recIds).order('updated_at');
+        if (desde) q = q.gt('updated_at', desde);
+        return q;
+      });
+      estado.tablaPropia = true;
+      return filas.map(f => ({ ...f, vuelta: 1, propia: true }));
+    } catch (e) {
+      if (!esTablaFaltante(e)) throw e;
+      estado.tablaPropia = false;
+    }
+  }
+  return todo(() => {
     let q = db().from('tiempos').select('id, inscripcion_id, recorrido_id, vuelta, hora_salida, hora_llegada, tiempo_bruto, estado, updated_at')
       .in('recorrido_id', recIds).is('deleted_at', null).order('updated_at');
     if (desde) q = q.gt('updated_at', desde);
     return q;
   });
-  if (completo) estado.tiempos.clear();
+}
+
+async function traerTiemposYPenales(completo) {
+  const recIds = estado.pes.map(p => p.id);
+  if (!recIds.length) return;
+  const desde = completo ? null : estado.ultimoSync;
+  const anteriores = estado.tiempos;
+  const filas = await leerTiempos(recIds, desde);
+  if (completo) estado.tiempos = new Map([...anteriores].filter(([k]) => estado.editando === k || estado.guardando.get(k) === 'guardando' || esPendiente(k)));
   for (const f of filas) {
     if ((f.vuelta || 1) !== 1) continue;
     const k = clave(f.inscripcion_id, f.recorrido_id);
     if (estado.editando === k || estado.guardando.get(k) === 'guardando' || esPendiente(k)) continue;
     const salidaMs = msDesdeISO(f.hora_salida), pasoMs = msDesdeISO(f.hora_llegada), brutoMs = msDesdeIntervalo(f.tiempo_bruto);
-    estado.tiempos.set(k, { id: f.id, salidaMs, pasoMs, brutoMs, estado: f.estado, brutoSinHoras: !!brutoMs && pasoMs == null });
+    // id = la fila de la página (rally.tiempos) a reemplazar, si ya se conoce.
+    estado.tiempos.set(k, { id: f.id ?? anteriores.get(k)?.id, salidaMs, pasoMs, brutoMs, estado: f.estado, brutoSinHoras: !!brutoMs && pasoMs == null, enPlanilla: !!f.propia });
     if (!estado.ultimoSync || f.updated_at > estado.ultimoSync) estado.ultimoSync = f.updated_at;
   }
   const pen = await todo(() => db().from('penalizaciones').select('id, inscripcion_id, recorrido_id, tiempo_penalizacion, motivo, created_at')
@@ -671,6 +695,10 @@ function llenarAlcance() {
   sel.value = estado.alcance;
 }
 
+// Color de cada etapa (se repiten cada 6) y tono alternado de sus PE.
+const colorEtapa = et => 'et' + (Math.max(0, estado.etapas.indexOf(et)) % 6);
+const colorPE = (et, pe) => `${colorEtapa(et)} ${et.recorridos.indexOf(pe) % 2 ? 'pe-b' : 'pe-a'}`;
+
 function llenarFiltroClases() {
   llenarAlcance();
   const clases = ordenarClases([...new Set(estado.inscritos.map(nombreClase))]);
@@ -690,9 +718,13 @@ function dibujar() {
 
   let cab = `<tr>
     <th rowspan="1">Nro</th><th title="Puesto en la clase según: ${esc(nombreAlcance())}">Psto.${estado.alcance !== 'general' ? `<small style="display:block;font-size:10px;">${esc(nombreAlcance())}</small>` : ''}</th><th class="fijo c-num">Nº COCHE</th><th>CLASE</th><th class="fijo c-pil pil">PILOTO / NAVEGANTE</th><th>ASOCIACIÓN</th>`;
+  // Colores: cada etapa tiene el suyo y sus PE alternan dos tonos (colorEtapa / colorPE).
   for (const et of estado.etapas) {
-    for (const pe of et.recorridos) cab += `<th>Hr. Salida</th><th>Hr. Paso P${pe.numero}</th><th class="pe ${estado.alcance === 'pe:' + pe.id ? 'alcance' : ''}" title="${esc(pe.nombre)} · ${pe.km} km">PE${pe.numero}</th>`;
-    cab += `<th class="etapa ${estado.alcance === 'etapa:' + et.id ? 'alcance' : ''}">${esc(et.nombre)}</th>`;
+    for (const pe of et.recorridos) {
+      const cc = colorPE(et, pe), t = `title="${esc(et.nombre)} · ${esc(pe.nombre)} · ${pe.km} km"`;
+      cab += `<th class="${cc}" ${t}>Hr. Salida</th><th class="${cc}" ${t}>Hr. Paso P${pe.numero}</th><th class="pe ${cc} ${estado.alcance === 'pe:' + pe.id ? 'alcance' : ''}" ${t}>PE${pe.numero}</th>`;
+    }
+    cab += `<th class="etapa ${colorEtapa(et)} ${estado.alcance === 'etapa:' + et.id ? 'alcance' : ''}">${esc(et.nombre)}</th>`;
   }
   cab += `<th>penalización</th><th class="gen">GENERAL</th><th>Promedio Velocidad km/h</th><th>DIF. CON ANTERIOR</th><th>DIF. CON PRIMERO</th></tr>`;
 
@@ -718,12 +750,13 @@ function dibujar() {
           const k = clave(i.id, pe.id);
           const marca = estado.guardando.get(k) || (esPendiente(k) ? 'espera' : '');
           const pasoTxt = p.especial ? ESPECIALES[p.especial] : verPaso(p.pasoMs);
-          tr += `<td class="ed salida ${marca}" tabindex="-1" data-r="${pe.id}" data-c="s">${verSalida(p.salidaMs)}</td>`;
-          tr += `<td class="ed paso ${marca} ${p.especial ? 'especial' : ''}" tabindex="-1" data-r="${pe.id}" data-c="p">${pasoTxt}</td>`;
-          tr += `<td class="c-pe">${verDuracion(p.brutoMs)}</td>`;
+          const cc = colorPE(et, pe);
+          tr += `<td class="ed salida ${cc} ${marca}" tabindex="-1" data-r="${pe.id}" data-c="s">${verSalida(p.salidaMs)}</td>`;
+          tr += `<td class="ed paso ${cc} ${marca} ${p.especial ? 'especial' : ''}" tabindex="-1" data-r="${pe.id}" data-c="p">${pasoTxt}</td>`;
+          tr += `<td class="c-pe ${cc}">${verDuracion(p.brutoMs)}</td>`;
         }
         const e = f.etapas[et.id];
-        tr += `<td class="c-etapa ${e.completa ? '' : 'parcial'}">${e.alguna ? verTotal(e.ms) : ''}</td>`;
+        tr += `<td class="c-etapa ${colorEtapa(et)} ${e.completa ? '' : 'parcial'}">${e.alguna ? verTotal(e.ms) : ''}</td>`;
       }
       const genTxt = f.completa ? verTotal(f.general) : f.especial ? ESPECIALES[f.especial] : f.completas ? `Faltan ${estado.pes.length - f.completas} PE` : '';
       tr += `<td class="c-penal" data-penal="${i.id}" title="Ver o agregar penalizaciones">${verPenal(f.penal)}</td>`;
@@ -888,7 +921,8 @@ async function guardarAhora(insId, recId) {
   const c = celdaPE(insId, pe);
   const bruto = especial ? null : c.brutoMs;
   const pen = penalPE(insId, recId);
-  if (!t.id && t.salidaMs == null && t.pasoMs == null && !especial && !t.brutoSinHoras) { estado.tiempos.delete(k); quitarPendiente(k, tsPend); return true; }
+  const vacia = t.salidaMs == null && t.pasoMs == null && !especial && !t.brutoSinHoras;
+  if (!t.id && !t.enPlanilla && vacia) { estado.tiempos.delete(k); quitarPendiente(k, tsPend); return true; }
   const datos = {
     hora_salida: t.salidaMs != null ? isoDesdeMs(t.salidaMs) : null,
     hora_llegada: !especial && t.pasoMs != null ? isoDesdeMs(t.pasoMs) : null,
@@ -906,11 +940,29 @@ async function guardarAhora(insId, recId) {
       const { data: s } = await supabase.auth.getSession();
       return new Error(s?.session ? 'Ese tiempo ya no existe en el servidor (lo borraron desde otro lado). Recargá la planilla.' : 'sin sesión');
     };
+    // 1) Los tiempos propios de la planilla (lo que la planilla muestra).
+    if (estado.tablaPropia !== false) {
+      const { data: fp, error: ep } = await db().from('planilla_tiempos')
+        .upsert({ inscripcion_id: insId, recorrido_id: recId, hora_salida: datos.hora_salida, hora_llegada: datos.hora_llegada, tiempo_bruto: datos.tiempo_bruto, estado: datos.estado }, { onConflict: 'inscripcion_id,recorrido_id' })
+        .select('inscripcion_id');
+      if (ep && esTablaFaltante(ep)) estado.tablaPropia = false;
+      else if (ep) throw ep;
+      else if (!fp || !fp.length) throw await sinFilas();
+      else t.enPlanilla = true;
+    }
+    // 2) La página: lo de la planilla REEMPLAZA el tiempo de ese auto en esa PE.
+    let hecho = false;
     if (t.id) {
-      const { data: filas, error } = await db().from('tiempos').update(datos).eq('id', t.id).select('id');
+      const { data: filas, error } = await db().from('tiempos').update(datos).eq('id', t.id).is('deleted_at', null).select('id');
       if (error) throw error;
-      if (!filas || !filas.length) throw await sinFilas();
-    } else {
+      hecho = !!(filas && filas.length);
+      if (!hecho) { const { data: s } = await supabase.auth.getSession(); if (!s?.session) throw new Error('sin sesión'); t.id = null; }
+    }
+    if (!hecho && vacia) {
+      // Celda borrada en la planilla: si la página tiene un tiempo de ese auto en esa PE, también se borra.
+      const { data: ex } = await db().from('tiempos').select('id').eq('inscripcion_id', insId).eq('recorrido_id', recId).eq('vuelta', 1).is('deleted_at', null).maybeSingle();
+      if (ex) { const { error: e3 } = await db().from('tiempos').update(datos).eq('id', ex.id); if (e3) throw e3; t.id = ex.id; }
+    } else if (!hecho) {
       const { data, error } = await db().from('tiempos').insert({ ...datos, inscripcion_id: insId, recorrido_id: recId, vuelta: 1 }).select('id').single();
       if (error && error.code === '23505') {
         // Otro operador cargó este mismo auto/PE recién: se actualiza esa fila.
@@ -995,7 +1047,8 @@ function abrirPenales(insId) {
     <div class="acciones"><button type="button" class="pl-btn" data-cerrar>Cerrar</button><button type="button" class="pl-btn primario" id="pl-pen-add">Aplicar</button></div>`);
   const recalcular = async recId => {
     await traerTiemposYPenales(false);
-    if (estado.tiempos.get(clave(insId, recId))?.id) await guardar(insId, recId);
+    const tp = estado.tiempos.get(clave(insId, recId));
+    if (tp?.id || tp?.enPlanilla) await guardar(insId, recId);
     d.querySelector('#pl-pen-lista').innerHTML = pinta();
     dibujar();
   };
