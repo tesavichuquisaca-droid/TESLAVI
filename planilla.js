@@ -706,6 +706,82 @@ function llenarFiltroClases() {
   $('pl-clase').value = clases.includes(estado.clase) ? estado.clase : '';
 }
 
+// ------------------------------------------------------------------
+// Tiempos para revisar: cada PE se compara con lo "normal" de su clase en esa
+// misma PE (la mediana, que no se mueve por uno o dos tiempos mal cargados).
+// Solo avisa con un color; no bloquea ni cambia nada.
+// ------------------------------------------------------------------
+const MARGEN = 0.20, MIN_MS = 30000, MAX_MS = 180000;   // 20%, entre 30 s y 3 min
+const MARGEN_POCOS = 0.35;                               // clase con menos de 3 autos: contra toda la PE
+const VEL_IMPOSIBLE = 160;                               // km/h
+const mediana = l => { const a = [...l].sort((x, y) => x - y); const m = a.length >> 1; return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2; };
+const leerRevisados = () => { try { return new Set(JSON.parse(localStorage.getItem('pl_revisados_v1') || '[]')); } catch (e) { return new Set(); } };
+const claveRevisado = (k, ms) => `${k}|${ms}`; // si el tiempo cambia, se vuelve a revisar
+
+function tiemposParaRevisar() {
+  const out = new Map();
+  const revisados = leerRevisados();
+  for (const pe of estado.pes) {
+    const porClase = {}, todos = [];
+    for (const ins of estado.inscritos) {
+      const ms = celdaPE(ins.id, pe).brutoMs;
+      if (!ms) continue;
+      (porClase[nombreClase(ins)] ||= []).push({ ins, ms });
+      todos.push(ms);
+    }
+    if (!todos.length) continue;
+    const normalPE = mediana(todos);
+    for (const [cl, lista] of Object.entries(porClase)) {
+      const pocos = lista.length < 3;
+      const normal = pocos ? normalPE : mediana(lista.map(x => x.ms));
+      const lim = Math.min(Math.max(normal * (pocos ? MARGEN_POCOS : MARGEN), MIN_MS), pocos ? MAX_MS * 1.5 : MAX_MS);
+      for (const { ins, ms } of lista) {
+        const k = clave(ins.id, pe.id);
+        if (revisados.has(claveRevisado(k, ms))) continue;
+        const vel = pe.km ? pe.km / (ms / 3600000) : 0;
+        const pct = Math.round((ms - normal) / normal * 100);
+        const ref = pocos ? `en toda la PE${pe.numero}` : `en ${cl}`;
+        if (vel > VEL_IMPOSIBLE) out.set(k, { tipo: 'imposible', msg: `Velocidad imposible: ${Math.round(vel)} km/h (${verDuracion(ms)} en ${pe.km} km). Revisá la hora de salida y de paso.` });
+        else if (ms < normal - lim) out.set(k, { tipo: 'rapido', msg: `Muy rápido: ${verDuracion(ms)} contra ${verDuracion(normal)} normal ${ref} (${pct}%). ¿Hora mal cargada?` });
+        else if (ms > normal + lim) out.set(k, { tipo: 'lento', msg: `Muy lento: ${verDuracion(ms)} contra ${verDuracion(normal)} normal ${ref} (+${pct}%). Puede ser real (problema en la PE) o un error.` });
+      }
+    }
+  }
+  return out;
+}
+
+function verRevision(insId, recId) {
+  const k = clave(insId, recId), a = estado.atipicos?.get(k);
+  if (!a) return;
+  const ins = estado.inscritos.find(i => i.id === insId), pe = estado.pes.find(p => p.id === recId);
+  const ms = celdaPE(insId, pe).brutoMs;
+  const d = dialogo(`<h3>${a.tipo === 'lento' ? '🟠' : a.tipo === 'rapido' ? '🟣' : '🔴'} Tiempo para revisar</h3>
+    <p><b>#${esc(ins.numero)} ${esc(nombresFila(ins))}</b> · PE${pe.numero}</p>
+    <p>${esc(a.msg)}</p>
+    <div class="acciones"><button type="button" class="pl-btn" data-cerrar>Cerrar</button>
+    <button type="button" class="pl-btn" id="pl-rev-ok" title="Deja de resaltarlo (vuelve si el tiempo cambia)">✓ Está bien</button>
+    <button type="button" class="pl-btn primario" id="pl-rev-corregir">Corregir la hora de paso</button></div>`);
+  d.querySelector('#pl-rev-ok').onclick = () => {
+    const r = leerRevisados(); r.add(claveRevisado(k, ms));
+    try { localStorage.setItem('pl_revisados_v1', JSON.stringify([...r])); } catch (e) { }
+    d.remove(); dibujar(); toast('Marcado como revisado.');
+  };
+  d.querySelector('#pl-rev-corregir').onclick = () => {
+    d.remove();
+    const td = document.querySelector(`tr[data-ins="${insId}"] td.ed[data-r="${recId}"][data-c="p"]`);
+    if (td) { seleccionar(td); empezarEdicion(td); }
+  };
+}
+// "⚠ N para revisar": lleva al siguiente, en el orden de la hoja.
+function irAlSiguienteParaRevisar() {
+  const celdas = [...document.querySelectorAll('.pl-tabla td.c-pe[data-revisar]')];
+  if (!celdas.length) return toast('No hay tiempos para revisar.');
+  estado.idxRevisar = ((estado.idxRevisar ?? -1) + 1) % celdas.length;
+  const td = celdas[estado.idxRevisar];
+  td.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
+  setTimeout(() => verRevision(td.closest('tr').dataset.ins, td.dataset.r), 350);
+}
+
 function dibujar() {
   if (!estado.rally || !estado.pes.length) {
     if (estado.rally) $('pl-marco').innerHTML = '<div class="pl-vacio">Este rally todavía no tiene etapas ni PE cargadas.</div>';
@@ -715,6 +791,10 @@ function dibujar() {
   const c = cfg();
   const grupos = clasificar();
   const kmTotal = estado.pes.reduce((a, p) => a + p.km, 0);
+  estado.atipicos = tiemposParaRevisar();
+  const nRev = estado.atipicos.size;
+  $('pl-revisar').hidden = !nRev;
+  $('pl-revisar').textContent = `⚠ ${nRev} ${nRev === 1 ? 'tiempo' : 'tiempos'} para revisar`;
 
   let cab = `<tr>
     <th rowspan="1">Nro</th><th title="Puesto en la clase según: ${esc(nombreAlcance())}">Psto.${estado.alcance !== 'general' ? `<small style="display:block;font-size:10px;">${esc(nombreAlcance())}</small>` : ''}</th><th class="fijo c-num">Nº COCHE</th><th>CLASE</th><th class="fijo c-pil pil">PILOTO / NAVEGANTE</th><th>ASOCIACIÓN</th>`;
@@ -753,7 +833,8 @@ function dibujar() {
           const cc = colorPE(et, pe);
           tr += `<td class="ed salida ${cc} ${marca}" tabindex="-1" data-r="${pe.id}" data-c="s">${verSalida(p.salidaMs)}</td>`;
           tr += `<td class="ed paso ${cc} ${marca} ${p.especial ? 'especial' : ''}" tabindex="-1" data-r="${pe.id}" data-c="p">${pasoTxt}</td>`;
-          tr += `<td class="c-pe ${cc}">${verDuracion(p.brutoMs)}</td>`;
+          const at = estado.atipicos.get(k);
+          tr += `<td class="c-pe ${cc} ${at ? 'atipico-' + at.tipo : ''}" data-r="${pe.id}" ${at ? `data-revisar="1" title="${esc(at.msg)} — tocá para ver"` : ''}>${verDuracion(p.brutoMs)}</td>`;
         }
         const e = f.etapas[et.id];
         tr += `<td class="c-etapa ${colorEtapa(et)} ${e.completa ? '' : 'parcial'}">${e.alguna ? verTotal(e.ms) : ''}</td>`;
@@ -1481,6 +1562,8 @@ function descargarPdf() {
 // Eventos
 // ------------------------------------------------------------------
 $('pl-marco').addEventListener('click', e => {
+  const rev = e.target.closest('td.c-pe[data-revisar]');
+  if (rev) return verRevision(rev.closest('tr').dataset.ins, rev.dataset.r);
   const pen = e.target.closest('td[data-penal]');
   if (pen) return abrirPenales(pen.dataset.penal);
   const td = e.target.closest('td.ed');
@@ -1537,6 +1620,7 @@ $('pl-ir').addEventListener('keydown', e => {
 $('pl-excel').onclick = descargarExcel;
 $('pl-copiar-lista').onclick = copiarLista;
 $('pl-pdf').onclick = descargarPdf;
+$('pl-revisar').onclick = irAlSiguienteParaRevisar;
 $('pl-orden-clases').onclick = abrirOrdenClases;
 $('pl-config').onclick = abrirConfig;
 $('pl-ayuda-x')?.addEventListener('click', () => { $('pl-ayuda').remove(); try { localStorage.setItem('pl_sin_ayuda', '1'); } catch (e) { } });

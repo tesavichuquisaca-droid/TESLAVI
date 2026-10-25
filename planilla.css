@@ -108,6 +108,11 @@ table.pl-tabla { border-collapse: separate; border-spacing: 0; font-family: var(
 .pl-tabla td.et5.pe-a { background: #fcebf2; }
 .pl-tabla td.et5.pe-b { background: #f8dbe7; }
 .pl-tabla td.c-etapa.et5 { background: #f2c6d8; }
+/* Tiempos para revisar (muy distintos a los de su clase en esa PE) */
+.pl-tabla td.c-pe.atipico-rapido { background: #ead7ff !important; color: #5b21b6; font-weight: 800; box-shadow: inset 0 0 0 2px #7c3aed; cursor: pointer; }
+.pl-tabla td.c-pe.atipico-lento { background: #ffe2bf !important; color: #9a4a00; font-weight: 800; box-shadow: inset 0 0 0 2px #f59e0b; cursor: pointer; }
+.pl-tabla td.c-pe.atipico-imposible { background: #ffd0d0 !important; color: #b91c1c; font-weight: 800; box-shadow: inset 0 0 0 2px #dc2626; cursor: pointer; }
+.pl-btn.pl-revisar { background: #5b2a00; border-color: #f59e0b; color: #ffd8a0; }
 .pl-tabla thead th.alcance { background: #b8860b; color: #fff; box-shadow: inset 0 -4px 0 #ffd166; } /* columna por la que se ordena */
 .pl-tabla thead tr:first-child th { border-top: 1px solid #444; }
 
